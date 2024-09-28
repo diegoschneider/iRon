@@ -1,4 +1,4 @@
-# iRon - lightweight overlays for iRacing <!-- omit in toc --> (OUTDATED)
+# iRon - lightweight overlays for iRacing <!-- omit in toc -->
 
 This project provides a few lightweight overlays for iRacing. Included are: a relative display with optional minimap, a dashboard with fuel calculator, a throttle/brake input graph, and a standings display.
 
