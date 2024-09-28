@@ -226,6 +226,7 @@ class OverlayDDU : public Overlay
             const bool   sessionIsTimeLimited  = ir_SessionLapsTotal.getInt() == 32767 && ir_SessionTimeRemain.getDouble()<48.0*3600.0;  // most robust way I could find to figure out whether this is a time-limited session (info in session string is often misleading)
             const double remainingSessionTime  = sessionIsTimeLimited ? ir_SessionTimeRemain.getDouble() : -1;
             const int    remainingLaps         = sessionIsTimeLimited ? int(0.5+remainingSessionTime/ir_estimateLaptime()) : (ir_SessionLapsRemainEx.getInt() != 32767 ? ir_SessionLapsRemainEx.getInt() : -1);
+            const int    targetLap             = g_cfg.getInt(m_name, "fuel_target_lap", -1);
             const int    currentLap            = ir_isPreStart() ? 0 : std::max(0,ir_CarIdxLap.getInt(carIdx));
             const bool   lapCountUpdated       = currentLap != m_prevCurrentLap;
             m_prevCurrentLap = currentLap;
@@ -287,6 +288,11 @@ class OverlayDDU : public Overlay
                     m_brush->SetColor( warnCol );
                     D2D1_RECT_F r = { m_boxGear.x0, m_boxGear.y0, m_boxGear.x1, m_boxGear.y1 };
                     m_renderTarget->FillRectangle( &r, m_brush.Get() );
+                } else if (ir_BrakeABSactive.getBool())
+                {
+                    m_brush->SetColor(badCol);
+                    D2D1_RECT_F r = { m_boxGear.x0, m_boxGear.y0, m_boxGear.x1, m_boxGear.y1 };
+                    m_renderTarget->FillRectangle(&r, m_brush.Get());
                 }
                 m_brush->SetColor( textCol );
 
@@ -448,9 +454,15 @@ class OverlayDDU : public Overlay
                 m_text.render( m_renderTarget.Get(), L"Laps", m_textFormat.Get(),      m_boxFuel.x0+xoff, m_boxFuel.x1, m_boxFuel.y0+m_boxFuel.h*2.3f/12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_LEADING );
                 m_text.render( m_renderTarget.Get(), L"Rem", m_textFormatSmall.Get(), m_boxFuel.x0+xoff, m_boxFuel.x1, m_boxFuel.y0+m_boxFuel.h*4.6f/12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_LEADING );
                 m_text.render( m_renderTarget.Get(), L"Per", m_textFormatSmall.Get(), m_boxFuel.x0+xoff, m_boxFuel.x1, m_boxFuel.y0+m_boxFuel.h*6.4f/12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_LEADING );
-                m_text.render( m_renderTarget.Get(), L"Fin+", m_textFormatSmall.Get(), m_boxFuel.x0+xoff, m_boxFuel.x1, m_boxFuel.y0+m_boxFuel.h*8.2f/12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_LEADING );
-                m_text.render( m_renderTarget.Get(), L"Add", m_textFormatSmall.Get(), m_boxFuel.x0+xoff, m_boxFuel.x1, m_boxFuel.y0+m_boxFuel.h*10.0f/12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_LEADING );
-
+                m_text.render(m_renderTarget.Get(), L"Fin+", m_textFormatSmall.Get(), m_boxFuel.x0 + xoff, m_boxFuel.x1, m_boxFuel.y0 + m_boxFuel.h * 8.2f / 12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_LEADING);
+                if (targetLap == -1) {
+                    m_text.render(m_renderTarget.Get(), L"Add", m_textFormatSmall.Get(), m_boxFuel.x0 + xoff, m_boxFuel.x1, m_boxFuel.y0 + m_boxFuel.h * 10.0f / 12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_LEADING);
+                }
+                else {
+                    swprintf(s, _countof(s), L"TgtFuel-%d", targetLap);
+                    m_text.render(m_renderTarget.Get(), s, m_textFormatSmall.Get(), m_boxFuel.x0 + xoff, m_boxFuel.x1, m_boxFuel.y0 + m_boxFuel.h * 10.0f / 12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_LEADING);
+                }
+                
                 const float estimateFactor = g_cfg.getFloat( m_name, "fuel_estimate_factor", 1.1f );
                 const float fuelReserveMargin = g_cfg.getFloat(m_name, "fuel_reserve_margin", 0.25f);
                 const float remainingFuel  = ir_FuelLevel.getFloat();
@@ -472,8 +484,14 @@ class OverlayDDU : public Overlay
 
                         m_isValidFuelLap = true;
                     }
-                    if( (ir_SessionFlags.getInt() & (irsdk_yellow|irsdk_yellowWaving|irsdk_red|irsdk_checkered|irsdk_crossed|irsdk_oneLapToGreen|irsdk_caution|irsdk_cautionWaving|irsdk_disqualify|irsdk_repair)) || ir_CarIdxOnPitRoad.getBool(carIdx) )
+                    
+                    // For Test Drive or solo practice
+                    const int flagStatus = (ir_SessionFlags.getInt() & ((((int)ir_session.sessionType != 0) ? irsdk_oneLapToGreen : 0) | irsdk_yellow | irsdk_yellowWaving | irsdk_red | irsdk_checkered | irsdk_crossed | irsdk_caution | irsdk_cautionWaving | irsdk_disqualify | irsdk_repair));
+                    if (flagStatus != 0 || ir_CarIdxOnPitRoad.getBool(carIdx)) {
+                        dbg("flagStatus: 0x%X", flagStatus);
                         m_isValidFuelLap = false;
+                    }
+                    
                     
                     for( float v : m_fuelUsedLastLaps ) {
                         avgPerLap += v;
@@ -513,13 +531,24 @@ class OverlayDDU : public Overlay
                     swprintf( s, _countof(s), imperial ? L"%.2f gl" : L"%.2f lt", val );
                     m_text.render( m_renderTarget.Get(), s, m_textFormat.Get(), m_boxFuel.x0, m_boxFuel.x1-xoff, m_boxFuel.y0+m_boxFuel.h*7.1f/12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_TRAILING );
                 }
+                else {
+                    swprintf(s, _countof(s), L"%.2f ERR", avgPerLap);
+                    m_text.render(m_renderTarget.Get(), s, m_textFormat.Get(), m_boxFuel.x0, m_boxFuel.x1 - xoff, m_boxFuel.y0 + m_boxFuel.h * 7.1f / 12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_TRAILING);
+                }
 
                 // To Finish
                 if( remainingLaps >= 0 && perLapConsEst > 0 )
                 {
-                    float toFinish = std::max( 0.0f, remainingLaps * perLapConsEst - remainingFuel );
+                    
+                    float toFinish;
 
-                    if( toFinish > ir_PitSvFuel.getFloat() || (toFinish>0 && !ir_dpFuelFill.getFloat()) )
+                    if (targetLap == -1) {
+                        toFinish = std::max(0.0f, remainingLaps * perLapConsEst - (remainingFuel - fuelReserveMargin));
+                    } else {
+                        toFinish = (targetLap+1-currentLap) * perLapConsEst - (m_lapStartRemainingFuel - fuelReserveMargin);
+                    }
+
+                    if( toFinish > ir_PitSvFuel.getFloat() || (toFinish>0 && !ir_dpFuelFill.getFloat())  )
                         m_brush->SetColor( warnCol );
                     else 
                         m_brush->SetColor( goodCol );
@@ -533,10 +562,20 @@ class OverlayDDU : public Overlay
 
                 // Add
                 float add = ir_PitSvFuel.getFloat();
-                if( add >= 0 )
+                if (targetLap != -1) {
+
+                    float targetFuel = (m_lapStartRemainingFuel - fuelReserveMargin) / ( targetLap + 1 - currentLap);
+
+                    if (imperial)
+                        targetFuel *= 0.264172f;
+                    swprintf(s, _countof(s), imperial ? L"%3.2f gl" : L"%3.2f lt", targetFuel);
+                    m_text.render(m_renderTarget.Get(), s, m_textFormat.Get(), m_boxFuel.x0, m_boxFuel.x1 - xoff, m_boxFuel.y0 + m_boxFuel.h * 10.7f / 12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_TRAILING);
+                    m_brush->SetColor(textCol);
+                }
+                else if( add >= 0 )
                 {
-                    if( ir_dpFuelFill.getFloat() )
-                        m_brush->SetColor( serviceCol );
+                    if (ir_dpFuelFill.getFloat())
+                        m_brush->SetColor(serviceCol);
 
                     if( imperial )
                         add *= 0.264172f;
@@ -635,6 +674,16 @@ class OverlayDDU : public Overlay
             // Brake bias
             {
                 const float bias = ir_dcBrakeBias.getFloat();
+                if (m_prevBrakeBias == 0) m_prevBrakeBias = bias;
+                if (m_prevBrakeBias != bias) m_prevBrakeBiasTickCount = tickCount;
+                if (m_prevBrakeBiasTickCount+500 > tickCount)
+                {
+                    m_brush->SetColor(warnCol);
+                    D2D1_RECT_F r = { m_boxBias.x0, m_boxBias.y0, m_boxBias.x1, m_boxBias.y1 };
+                    m_renderTarget->FillRectangle(&r, m_brush.Get());
+                }
+                m_brush->SetColor(textCol);
+                m_prevBrakeBias = bias;
                 swprintf( s, _countof(s), L"%+3.1f", bias );
                 m_text.render( m_renderTarget.Get(), s, m_textFormat.Get(), m_boxBias.x0, m_boxBias.x1, m_boxBias.y0+m_boxBias.h*0.5f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_CENTER );
             }
@@ -780,6 +829,9 @@ class OverlayDDU : public Overlay
         DWORD               m_lastLapChangeTickCount = 0;
 
         float               m_prevBestLapTime = 0;
+        
+        float               m_prevBrakeBias = 0;
+        DWORD               m_prevBrakeBiasTickCount = 0;
 
         float               m_lapStartRemainingFuel = 0;
         std::deque<float>   m_fuelUsedLastLaps;

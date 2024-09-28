@@ -55,6 +55,8 @@ enum class Hotkey
     UiEdit,
     Standings,
     DDU,
+    TargetLapUp,
+    TargetLapDown,
     Inputs,
     Relative,
     Cover
@@ -65,6 +67,8 @@ static void registerHotkeys()
     UnregisterHotKey( NULL, (int)Hotkey::UiEdit );
     UnregisterHotKey( NULL, (int)Hotkey::Standings );
     UnregisterHotKey( NULL, (int)Hotkey::DDU );
+    UnregisterHotKey(NULL, (int)Hotkey::TargetLapUp);
+    UnregisterHotKey(NULL, (int)Hotkey::TargetLapDown);
     UnregisterHotKey( NULL, (int)Hotkey::Inputs );
     UnregisterHotKey( NULL, (int)Hotkey::Relative );
     UnregisterHotKey( NULL, (int)Hotkey::Cover );
@@ -79,6 +83,11 @@ static void registerHotkeys()
 
     if( parseHotkey( g_cfg.getString("OverlayDDU","toggle_hotkey","ctrl-1"),&mod,&vk) )
         RegisterHotKey( NULL, (int)Hotkey::DDU, mod, vk );
+
+    if (parseHotkey(g_cfg.getString("OverlayDDU", "target_lap_up", "ctrl-."), &mod, &vk))
+        RegisterHotKey(NULL, (int)Hotkey::TargetLapUp, mod, vk);
+    if (parseHotkey(g_cfg.getString("OverlayDDU", "target_lap_down", "ctrl-,"), &mod, &vk))
+        RegisterHotKey(NULL, (int)Hotkey::TargetLapDown, mod, vk);
 
     if( parseHotkey( g_cfg.getString("OverlayInputs","toggle_hotkey","ctrl-2"),&mod,&vk) )
         RegisterHotKey( NULL, (int)Hotkey::Inputs, mod, vk );
@@ -190,6 +199,8 @@ int main()
     printf("    Move and resize overlays:     %s\n", g_cfg.getString("General","ui_edit_hotkey","").c_str() );
     printf("    Toggle standings overlay:     %s\n", g_cfg.getString("OverlayStandings","toggle_hotkey","").c_str() );
     printf("    Toggle DDU overlay:           %s\n", g_cfg.getString("OverlayDDU","toggle_hotkey","").c_str() );
+    printf("    DDU Target lap up             %s\n", g_cfg.getString("OverlayDDU", "target_lap_up", "").c_str());
+    printf("    DDU Target lap down           %s\n", g_cfg.getString("OverlayDDU", "target_lap_down", "").c_str());
     printf("    Toggle inputs overlay:        %s\n", g_cfg.getString("OverlayInputs","toggle_hotkey","").c_str() );
     printf("    Toggle relative overlay:      %s\n", g_cfg.getString("OverlayRelative","toggle_hotkey","").c_str() );
     printf("    Toggle cover overlay:         %s\n", g_cfg.getString("OverlayCover","toggle_hotkey","").c_str() );
@@ -308,6 +319,13 @@ int main()
                         break;
                     case (int)Hotkey::Cover:
                         g_cfg.setBool( "OverlayCover", "enabled", !g_cfg.getBool("OverlayCover","enabled",true) );
+                        break;
+
+                    case (int)Hotkey::TargetLapUp:
+                        g_cfg.setInt("OverlayDDU", "fuel_target_lap", g_cfg.getInt("OverlayDDU", "fuel_target_lap", 0) + 1);
+                        break;
+                    case (int)Hotkey::TargetLapDown:
+                        g_cfg.setInt("OverlayDDU", "fuel_target_lap", std::max( g_cfg.getInt("OverlayDDU", "fuel_target_lap", 0) - 1, 0) );
                         break;
                     }
                     

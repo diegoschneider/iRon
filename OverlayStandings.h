@@ -25,6 +25,7 @@ SOFTWARE.
 #pragma once
 
 #include <assert.h>
+#include <set>
 #include "Overlay.h"
 #include "Config.h"
 #include "OverlayDebug.h"
@@ -93,23 +94,23 @@ protected:
         m_columns.add( (int)Columns::NAME,       0, fontSize/2 );
         m_columns.add( (int)Columns::PIT,        computeTextExtent( L"P.Age", m_dwriteFactory.Get(), m_textFormat.Get() ).x, fontSize/2 );
         m_columns.add( (int)Columns::LICENSE,    computeTextExtent( L"A 4.44", m_dwriteFactory.Get(), m_textFormatSmall.Get() ).x, fontSize/6 );
-        m_columns.add( (int)Columns::IRATING,    computeTextExtent( L"999.9k", m_dwriteFactory.Get(), m_textFormatSmall.Get() ).x, fontSize/6 );
+        m_columns.add( (int)Columns::IRATING,    computeTextExtent( L" 9.9k ", m_dwriteFactory.Get(), m_textFormatSmall.Get() ).x, fontSize/6 );
 
         if (g_cfg.getBool(m_name, "show_car_brand", true))
             m_columns.add( (int)Columns::CAR_BRAND,  30, fontSize / 2);
 
         m_columns.add( (int)Columns::POSITIONS_GAINED, computeTextExtent(L"↑6", m_dwriteFactory.Get(), m_textFormat.Get()).x, fontSize / 2);
-        m_columns.add( (int)Columns::GAP,        computeTextExtent(L"9999.9", m_dwriteFactory.Get(), m_textFormat.Get()).x, fontSize / 2 );
-        m_columns.add( (int)Columns::BEST,       computeTextExtent( L"999.99.999", m_dwriteFactory.Get(), m_textFormat.Get() ).x, fontSize/2 );
+        m_columns.add( (int)Columns::GAP,        computeTextExtent(L"999.9", m_dwriteFactory.Get(), m_textFormat.Get()).x, fontSize / 2 );
+        m_columns.add( (int)Columns::BEST,       computeTextExtent( L"99:99.999", m_dwriteFactory.Get(), m_textFormat.Get() ).x, fontSize/2 );
 
         if (g_cfg.getBool(m_name, "show_lap_time", true))
-            m_columns.add( (int)Columns::LAST,   computeTextExtent( L"999.99.999", m_dwriteFactory.Get(), m_textFormat.Get() ).x, fontSize/2 );
+            m_columns.add( (int)Columns::LAST,   computeTextExtent( L"99:99.999", m_dwriteFactory.Get(), m_textFormat.Get() ).x, fontSize/2 );
 
         if (g_cfg.getBool(m_name, "show_delta", true))
             m_columns.add( (int)Columns::DELTA,  computeTextExtent( L"99.99", m_dwriteFactory.Get(), m_textFormat.Get() ).x, fontSize/2 );
 
         if (g_cfg.getBool(m_name, "show_L5", false))
-            m_columns.add( (int)Columns::L5,     computeTextExtent(L"999.99.999", m_dwriteFactory.Get(), m_textFormat.Get()).x, fontSize / 2 );
+            m_columns.add( (int)Columns::L5,     computeTextExtent(L"99.99.999", m_dwriteFactory.Get(), m_textFormat.Get()).x, fontSize / 2 );
     }
 
     virtual void onUpdate()
@@ -237,23 +238,32 @@ protected:
                 return ap < bp;
             } );
 
-        map<int, int> classLider;
-
-        for (const CarInfo& car : carInfo) {
-            if (car.position > 1) break;
-            classLider.insert_or_assign(car.classIdx, car.carIdx);
-        }
-
         // Compute lap gap to leader and compute delta
+        int classLeader = -1;
+        int carsInClass = 0;
         for( int i=0; i<(int)carInfo.size(); ++i )
         {
             CarInfo&       ci       = carInfo[i];
-            ci.lapGap = ir_getLapDeltaToLeader( ci.carIdx, classLider[ci.classIdx]);
+            if (ci.classIdx != ciSelf.classIdx)
+                continue;
+
+            carsInClass++;
+
+            if (ci.position == 1) {
+                classLeader = ci.carIdx;
+            }
+
+            ci.lapGap = ir_getLapDeltaToLeader( ci.carIdx, classLeader);
             ci.delta = ir_getDeltaTime( ci.carIdx, ir_session.driverCarIdx );
 
             if (ir_session.sessionType != SessionType::RACE) {
-                ci.gap = ir_CarIdxF2Time.getFloat(ci.carIdx) - ir_CarIdxF2Time.getFloat(classLider[ci.classIdx]);
-                ci.gap = ci.gap < 0 ? 0 : ci.gap;
+                if(classLeader != -1) {
+                    ci.gap = ir_CarIdxF2Time.getFloat(ci.carIdx) - ir_CarIdxF2Time.getFloat(classLeader);
+                    ci.gap = ci.gap < 0 ? 0 : ci.gap;
+                }
+                else {
+                    ci.gap = 0;
+                }
             }
         }
 
@@ -275,9 +285,9 @@ protected:
         const float4 deltaPosCol        = g_cfg.getFloat4( m_name, "delta_positive_col", float4(0.0f, 1.0f, 0.0f, 1.0f));
         const float4 deltaNegCol        = g_cfg.getFloat4( m_name, "delta_negative_col", float4(1.0f, 0.0f, 0.0f, 1.0f));
         const float  licenseBgAlpha     = g_cfg.getFloat( m_name, "license_background_alpha", 0.8f );
-        const int  numTopDrivers        = g_cfg.getInt(m_name, "num_top_drivers", defaultNumTopDrivers);
-        const int  numAheadDrivers      = g_cfg.getInt(m_name, "num_ahead_drivers", defaultNumAheadDrivers);
-        const int  numBehindDrivers     = g_cfg.getInt(m_name, "num_behind_drivers", defaultNumBehindDrivers);
+        int  numTopDrivers        = g_cfg.getInt(m_name, "num_top_drivers", defaultNumTopDrivers);
+        int  numAheadDrivers      = g_cfg.getInt(m_name, "num_ahead_drivers", defaultNumAheadDrivers);
+        int  numBehindDrivers     = g_cfg.getInt(m_name, "num_behind_drivers", defaultNumBehindDrivers);
         const bool   imperial           = ir_DisplayUnits.getInt() == 0;
 
         const float xoff = 10.0f;
@@ -353,12 +363,28 @@ protected:
         }
 
         // Content
+        
+        int carsToDraw = ((ybottom - 2 * yoff) / lineHeight) -1 ;
+        if (carsToDraw >= carsInClass) {
+            numTopDrivers = carsToDraw;
+        }
+        else {
+            // cars to add ahead = total cars - position
+            numAheadDrivers += max((ciSelf.position - carsInClass + numBehindDrivers), 0);
+            numBehindDrivers -= min(max((ciSelf.position - carsInClass + numBehindDrivers), 0), 2);
+            numTopDrivers += max(carsToDraw - (numTopDrivers+numAheadDrivers+numBehindDrivers+2), 0);
+            numBehindDrivers += max(carsToDraw - (ciSelf.position + numBehindDrivers), 0);
+
+        }
+        //printf("Cars to draw : %d", carsToDraw);
+        //std::cout << std::endl;
         int drawnCars = 0;
         int selfClassDrivers = 0;
+        bool skippedCars = false;
         for( int i=0; i<(int)carInfo.size(); ++i )
         {
             y = 2*yoff + lineHeight/2 + (drawnCars+1)*lineHeight;
-
+            
             if (ir_CarIdxClass.getInt(carInfo[i].carIdx) != ir_PlayerCarClass.getInt()) {
                 continue;
             }
@@ -369,11 +395,18 @@ protected:
                 break;
 
             // Focus on the driver
-            if (selfClassDrivers == selfPosition - numAheadDrivers - 2)
-                drawnCars++;
-
-            if (selfPosition > 0 && selfClassDrivers >= numTopDrivers && (selfClassDrivers < selfPosition - numAheadDrivers - 1 || selfClassDrivers > selfPosition + numBehindDrivers - 1))
-                continue;
+            if (selfPosition > 0 && selfClassDrivers > numTopDrivers) {                
+                if (selfClassDrivers < selfPosition - numAheadDrivers) {
+                    if (!skippedCars) {
+                        skippedCars = true;
+                        drawnCars++;
+                    }
+                    continue;
+                }
+                if (selfClassDrivers > selfPosition + numBehindDrivers) {
+                    continue;
+                }
+            }
 
             drawnCars++;
 
@@ -481,7 +514,18 @@ protected:
             {
                 string carNameLowerCase = toLowerCase(car.carName);
 
-                IWICFormatConverter* valor = findAndDrawCar(carNameLowerCase, mapa);    //Valor por defecto si no se encuentra el coche en el mapa
+                IWICFormatConverter* valor = findAndDrawCar(carNameLowerCase, mapa);
+                
+                //Default value if cant find car
+                if (valor == nullptr) {
+                    
+                    if (notFoundBrands.find(car.carName) == notFoundBrands.end() ) {
+                        std::cout << "Couldn't find car '" << car.carName << "' in the carIcons folder." << std::endl;
+                        notFoundBrands.insert(car.carName);
+                    }
+
+                    valor = findAndDrawCar("00error", mapa);
+                }
 
                 if (valor != nullptr) {
                     ID2D1Bitmap* pBitmap = NULL;
@@ -491,7 +535,7 @@ protected:
                     pBitmap->Release();
                 }
                 else {
-                    std::cout << "No se encontró el coche '" << car.carName << "' en el mapa." << std::endl;
+                    std::cout << "Error rendering car brand!" << std::endl;
                 }
             
             }
@@ -602,14 +646,17 @@ protected:
             ir_getSessionTimeRemaining(hours, mins, secs);
             const int laps = max(ir_CarIdxLap.getInt(ir_session.driverCarIdx), ir_CarIdxLapCompleted.getInt(ir_session.driverCarIdx));
             const int remainingLaps = ir_getLapsRemaining();
+            const int irTotalLaps = ir_SessionLapsTotal.getInt();
             int totalLaps = remainingLaps;
             
-            if (ir_SessionLapsTotal.getInt() == 32767)
+            if (irTotalLaps == 32767)
                 totalLaps = laps + remainingLaps;
+            else
+                totalLaps = irTotalLaps;
 
             m_brush->SetColor(float4(1,1,1,0.4f));
             m_renderTarget->DrawLine( float2(0,ybottom),float2((float)m_width,ybottom),m_brush.Get() );
-            swprintf( s, _countof(s), L"SoF: %d      Track Temp: %.1f°%c      Session end: %d:%02d:%02d       Laps: %d/~%d", ir_session.sof, trackTemp, tempUnit, hours, mins, secs, laps, totalLaps);
+            swprintf( s, _countof(s), L"SoF: %d       Track Temp: %.1f°%c      Session end: %d:%02d:%02d       Laps: %d/%s%d", ir_session.sof, trackTemp, tempUnit, hours, mins, secs, laps, (irTotalLaps == 32767 ? "~" : ""), totalLaps);
             y = m_height - (m_height-ybottom)/2;
             m_brush->SetColor( headerCol );
             m_text.render( m_renderTarget.Get(), s, m_textFormat.Get(), xoff, (float)m_width-2*xoff, y, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_CENTER );
@@ -632,4 +679,5 @@ protected:
     TextCache    m_text;
     vector<vector<float>> avgL5Times;
     map<string, IWICFormatConverter*> mapa;
+    std::set<std::string> notFoundBrands;
 };

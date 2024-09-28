@@ -94,6 +94,7 @@ class OverlayRelative : public Overlay
             struct CarInfo {
                 int     carIdx = 0;
                 float   delta = 0;
+                float   lapDistPct = 0;
                 int     lapDelta = 0;
                 int     pitAge = 0;
                 float   last = 0;
@@ -152,15 +153,16 @@ class OverlayRelative : public Overlay
                     ci.carIdx = i;
                     ci.delta = delta;
                     ci.lapDelta = lapDelta;
+                    ci.lapDistPct = ir_CarIdxLapDistPct.getFloat(i);
                     ci.pitAge = ir_CarIdxLap.getInt(i) - car.lastLapInPits;
                     ci.last = ir_CarIdxLastLapTime.getFloat(i);
                     relatives.push_back( ci );
                 }
             }
 
-            // Sort by delta
+            // Sort by lap % completed, in case deltas are a bit desynced
             std::sort( relatives.begin(), relatives.end(), 
-                []( const CarInfo& a, const CarInfo&b ) { return a.delta > b.delta; } );
+                []( const CarInfo& a, const CarInfo&b ) { return a.lapDistPct > b.lapDistPct; } );
 
             // Locate our driver's index in the new array
             int selfCarInfoIdx = -1;
@@ -461,7 +463,7 @@ class OverlayRelative : public Overlay
 
         virtual bool canEnableWhileNotDriving() const
         {
-            return true;
+            return g_cfg.getBool(m_name, "enabled_while_not_driving", true);
         }
 
     protected:

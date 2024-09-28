@@ -432,6 +432,30 @@ inline bool parseHotkey( const std::string& desc, UINT* mod, UINT* vk )
 
     if( key.length() == 1 )
     {
+        // if A-Z
+        if(key[0] >= 0x41 && key[0] <= 0x5A) {
+            *vk = key[0];
+            return true;
+        }
+        
+        // TODO: This is dumb. Should check for the keyboard distribution, right?
+        if (key[0] == '+') {
+            *vk = VK_OEM_PLUS;
+            return true;
+        }
+        if (key[0] == ',') {
+            *vk = VK_OEM_COMMA;
+            return true;
+        }
+        if (key[0] == '-') {
+            *vk = VK_OEM_MINUS;
+            return true;
+        }
+        if (key[0] == '.') {
+            *vk = VK_OEM_PERIOD;
+            return true;
+        }
+
         *vk = key[0];
         return true;
     }

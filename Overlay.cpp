@@ -31,6 +31,8 @@ SOFTWARE.
 using namespace Microsoft::WRL;
 
 static const int ResizeBorderWidth = 25;
+static const int EditStyle = WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOREDIRECTIONBITMAP;
+static const int DefaultStyle = EditStyle | WS_EX_LAYERED | WS_EX_TRANSPARENT;
 
 static LRESULT CALLBACK windowProc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
 {
@@ -132,7 +134,7 @@ void Overlay::enable( bool on )
             RegisterClassEx(&wndclass);
         }
 
-        m_hwnd = CreateWindowEx( WS_EX_TOPMOST|WS_EX_TOOLWINDOW|WS_EX_NOREDIRECTIONBITMAP, wndclassName, m_name.c_str(), WS_POPUP|WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, 500, 400, NULL, NULL, NULL, NULL );
+        m_hwnd = CreateWindowEx( DefaultStyle , wndclassName, m_name.c_str(), WS_POPUP|WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, 500, 400, NULL, NULL, NULL, NULL );
         SetWindowLongPtr( m_hwnd, GWLP_USERDATA, (LONG_PTR)this );
 
         RECT r;
@@ -240,6 +242,11 @@ bool Overlay::isEnabled() const
 void Overlay::enableUiEdit( bool on )
 {
     m_uiEditEnabled = on;
+    if (on)
+        SetWindowLongPtr(m_hwnd, GWL_EXSTYLE, EditStyle);
+    else
+        SetWindowLongPtr(m_hwnd, GWL_EXSTYLE, DefaultStyle);
+    
     update();
 }
 
