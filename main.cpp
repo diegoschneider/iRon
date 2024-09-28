@@ -208,8 +208,9 @@ int main()
            "stores your settings. You can edit the file at any time, even while iRon is running,\n"\
            "to customize your overlays and hotkeys.\n\n");
     printf("To exit iRon, simply close this console window.\n\n");
-    printf("For the latest version or to submit bug reports, go to:\n\n        https://github.com/lespalt/iRon\n\n");
-    printf("\nHappy Racing!\n");
+    printf("For the latest version ***of this fork*** or to submit bug reports, go to:\n\n        https://github.com/diegoschneider/iRon\n\n");
+    printf("Many thanks to lespalt (https://github.com/lespalt/iRon) and frmjar (https://github.com/frmjar/iRon) for their work!\n\n");
+    printf("Happy Racing!\n");
     printf("====================================================================================\n\n");
 
     // Create overlays
