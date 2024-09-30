@@ -294,7 +294,7 @@ float irsdkClient::getVarFloat(int idx, int entry)
 		else
 		{
 			//invalid variable index
-			//assert(false);
+			assert(false);
 		}
 	}
 

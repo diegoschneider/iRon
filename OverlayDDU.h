@@ -593,22 +593,30 @@ class OverlayDDU : public Overlay
                 const float rr = 100.0f * std::min(std::min( ir_RRwearL.getFloat(), ir_RRwearM.getFloat() ), ir_RRwearR.getFloat() );
 
                 // Left
-                if( ir_dpLTireChange.getFloat() )
+                if( ir_dpLFTireChange.getFloat() )
                     m_brush->SetColor( serviceCol );
                 else
                     m_brush->SetColor( textCol );
                 swprintf( s, _countof(s), L"%d", (int)(lf+0.5f) );
                 m_text.render( m_renderTarget.Get(), s, m_textFormatSmall.Get(), m_boxTires.x0+20, m_boxTires.x0+m_boxTires.w/2, m_boxTires.y0+m_boxTires.h*1.0f/3.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_CENTER );
+                if (ir_dpLRTireChange.getFloat())
+                    m_brush->SetColor(serviceCol);
+                else
+                    m_brush->SetColor(textCol);
                 swprintf( s, _countof(s), L"%d", (int)(lr+0.5f) );
                 m_text.render( m_renderTarget.Get(), s, m_textFormatSmall.Get(), m_boxTires.x0+20, m_boxTires.x0+m_boxTires.w/2, m_boxTires.y0+m_boxTires.h*2.0f/3.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_CENTER );
 
                 // Right
-                if( ir_dpRTireChange.getFloat() )
+                if( ir_dpRFTireChange.getFloat() )
                     m_brush->SetColor( serviceCol );
                 else
                     m_brush->SetColor( textCol );
                 swprintf( s, _countof(s), L"%d", (int)(rf+0.5f) );
                 m_text.render( m_renderTarget.Get(), s, m_textFormatSmall.Get(), m_boxTires.x0+m_boxTires.w/2, m_boxTires.x1-20, m_boxTires.y0+m_boxTires.h*1.0f/3.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_CENTER );
+                if (ir_dpRRTireChange.getFloat())
+                    m_brush->SetColor(serviceCol);
+                else
+                    m_brush->SetColor(textCol);
                 swprintf( s, _countof(s), L"%d", (int)(rr+0.5f) );
                 m_text.render( m_renderTarget.Get(), s, m_textFormatSmall.Get(), m_boxTires.x0+m_boxTires.w/2, m_boxTires.x1-20, m_boxTires.y0+m_boxTires.h*2.0f/3.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_CENTER );
                 m_brush->SetColor( textCol );
