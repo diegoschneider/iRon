@@ -29,6 +29,7 @@ SOFTWARE.
 #include "Overlay.h"
 #include "iracing.h"
 #include "Config.h"
+#include "OverlayDebug.h"
 
 class OverlayRelative : public Overlay
 {
@@ -94,6 +95,7 @@ class OverlayRelative : public Overlay
             struct CarInfo {
                 int     carIdx = 0;
                 float   delta = 0;
+                float   deltaMts = 0;
                 float   lapDistPct = 0;
                 int     lapDelta = 0;
                 int     pitAge = 0;
@@ -102,16 +104,20 @@ class OverlayRelative : public Overlay
             std::vector<CarInfo> relatives;
             relatives.reserve( IR_MAX_CARS );
             const float ownClassEstLaptime = ir_session.cars[ir_session.driverCarIdx].carClassEstLapTime;
-
+            const int lapcountSelf = ir_CarIdxLap.getInt(ir_session.driverCarIdx);
+            const float SelfLapDist = ir_LapDist.getFloat(ir_session.driverCarIdx);
+            const float SelfLapDistPct = ir_CarIdxLapDistPct.getFloat(ir_session.driverCarIdx);
+            const float SelfEstLapTime = ir_CarIdxEstTime.getFloat(ir_session.driverCarIdx);
+            const float trackLength = SelfLapDist / SelfLapDistPct;
+            dbg("TrackLen: %f", trackLength);
             // Populate cars with the ones for which a relative/delta comparison is valid
             for( int i=0; i<IR_MAX_CARS; ++i )
             {
                 const Car& car = ir_session.cars[i];
 
-                const int lapcountS = ir_CarIdxLap.getInt(ir_session.driverCarIdx);
-                const int lapcountC = ir_CarIdxLap.getInt(i);
+                const int lapcountCar = ir_CarIdxLap.getInt(i);
 
-                if( lapcountC >= 0 && !car.isSpectator && car.carNumber>=0 )
+                if( lapcountCar >= 0 && !car.isSpectator && car.carNumber>=0 )
                 {
                     // Add the pace car only under yellow or initial pace lap
                     if( car.isPaceCar && !(ir_SessionFlags.getInt() & (irsdk_caution|irsdk_cautionWaving)) && !ir_isPreStart() )
@@ -120,24 +126,28 @@ class OverlayRelative : public Overlay
                     // If the other car is up to half a lap in front, we consider the delta 'ahead', otherwise 'behind'.
 
                     float delta = 0;
-                    int   lapDelta = lapcountC - lapcountS;
+                    float deltaMts = 0;
+                    int   lapDelta = lapcountCar - lapcountSelf;
 
                     const float L = ir_estimateLaptime();
                     const float LClassRatio = car.carClassEstLapTime / ownClassEstLaptime;
-                    const float C = ir_CarIdxEstTime.getFloat(i) / LClassRatio;
-                    const float S = ir_CarIdxEstTime.getFloat(ir_session.driverCarIdx);
+                    const float CarEstLapTime = ir_CarIdxEstTime.getFloat(i) / LClassRatio;
+                    const float CarLapDistPct = ir_CarIdxLapDistPct.getFloat(i);
+                    const float CarLapDist = CarLapDistPct * trackLength;
 
                     // Does the delta between us and the other car span across the start/finish line?
-                    const bool wrap = fabsf(ir_CarIdxLapDistPct.getFloat(i) - ir_CarIdxLapDistPct.getFloat(ir_session.driverCarIdx)) > 0.5f;
+                    const bool wrap = fabsf(CarLapDistPct - SelfLapDistPct) > 0.5f;
 
                     if( wrap )
                     {
-                        delta     = S > C ? (C-S)+ownClassEstLaptime : (C-S)-ownClassEstLaptime;
-                        lapDelta += S > C ? -1 : 1;
+                        deltaMts = (CarLapDist + trackLength) - SelfLapDist;
+                        delta     = SelfLapDistPct > CarLapDistPct ? (CarEstLapTime-SelfEstLapTime)+ownClassEstLaptime : (CarEstLapTime-SelfEstLapTime)-ownClassEstLaptime;
+                        lapDelta += SelfLapDistPct > CarLapDistPct ? -1 : 1;
                     }
                     else
                     {
-                        delta = C - S;
+                        deltaMts = CarLapDist - SelfLapDist;
+                        delta = CarEstLapTime - SelfEstLapTime;
                     }
 
                     // Assume no lap delta when not in a race, because we don't want to show drivers as lapped/lapping there.
@@ -152,6 +162,7 @@ class OverlayRelative : public Overlay
                     CarInfo ci;
                     ci.carIdx = i;
                     ci.delta = delta;
+                    ci.deltaMts = deltaMts;
                     ci.lapDelta = lapDelta;
                     ci.lapDistPct = ir_CarIdxLapDistPct.getFloat(i);
                     ci.pitAge = ir_CarIdxLap.getInt(i) - car.lastLapInPits;
@@ -162,7 +173,7 @@ class OverlayRelative : public Overlay
 
             // Sort by lap % completed, in case deltas are a bit desynced
             std::sort( relatives.begin(), relatives.end(), 
-                []( const CarInfo& a, const CarInfo&b ) { return a.lapDistPct > b.lapDistPct; } );
+                []( const CarInfo& a, const CarInfo&b ) {return a.deltaMts > b.deltaMts;} );
 
             // Locate our driver's index in the new array
             int selfCarInfoIdx = -1;
