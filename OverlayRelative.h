@@ -95,8 +95,8 @@ class OverlayRelative : public Overlay
             struct CarInfo {
                 int     carIdx = 0;
                 float   delta = 0;
-                float   deltaMts = 0;
                 float   lapDistPct = 0;
+                int     wrappedSum = 0;
                 int     lapDelta = 0;
                 int     pitAge = 0;
                 float   last = 0;
@@ -105,11 +105,8 @@ class OverlayRelative : public Overlay
             relatives.reserve( IR_MAX_CARS );
             const float ownClassEstLaptime = ir_session.cars[ir_session.driverCarIdx].carClassEstLapTime;
             const int lapcountSelf = ir_CarIdxLap.getInt(ir_session.driverCarIdx);
-            const float SelfLapDist = ir_LapDist.getFloat(ir_session.driverCarIdx);
             const float SelfLapDistPct = ir_CarIdxLapDistPct.getFloat(ir_session.driverCarIdx);
             const float SelfEstLapTime = ir_CarIdxEstTime.getFloat(ir_session.driverCarIdx);
-            const float trackLength = SelfLapDist / SelfLapDistPct;
-            dbg("TrackLen: %f", trackLength);
             // Populate cars with the ones for which a relative/delta comparison is valid
             for( int i=0; i<IR_MAX_CARS; ++i )
             {
@@ -126,27 +123,33 @@ class OverlayRelative : public Overlay
                     // If the other car is up to half a lap in front, we consider the delta 'ahead', otherwise 'behind'.
 
                     float delta = 0;
-                    float deltaMts = 0;
                     int   lapDelta = lapcountCar - lapcountSelf;
 
                     const float L = ir_estimateLaptime();
                     const float LClassRatio = car.carClassEstLapTime / ownClassEstLaptime;
                     const float CarEstLapTime = ir_CarIdxEstTime.getFloat(i) / LClassRatio;
                     const float CarLapDistPct = ir_CarIdxLapDistPct.getFloat(i);
-                    const float CarLapDist = CarLapDistPct * trackLength;
 
                     // Does the delta between us and the other car span across the start/finish line?
                     const bool wrap = fabsf(CarLapDistPct - SelfLapDistPct) > 0.5f;
+                    int wrappedSum = 0;
 
                     if( wrap )
                     {
-                        deltaMts = (CarLapDist + trackLength) - SelfLapDist;
-                        delta     = SelfLapDistPct > CarLapDistPct ? (CarEstLapTime-SelfEstLapTime)+ownClassEstLaptime : (CarEstLapTime-SelfEstLapTime)-ownClassEstLaptime;
-                        lapDelta += SelfLapDistPct > CarLapDistPct ? -1 : 1;
+                        if (SelfLapDistPct > CarLapDistPct) {
+                            delta = (CarEstLapTime - SelfEstLapTime) + ownClassEstLaptime;
+                            lapDelta += -1;
+                            wrappedSum = 1;
+                        }
+                        else {
+                            delta = (CarEstLapTime - SelfEstLapTime) - ownClassEstLaptime;
+                            lapDelta += 1;
+                            wrappedSum = -1;
+                        }
+
                     }
                     else
                     {
-                        deltaMts = CarLapDist - SelfLapDist;
                         delta = CarEstLapTime - SelfEstLapTime;
                     }
 
@@ -162,9 +165,9 @@ class OverlayRelative : public Overlay
                     CarInfo ci;
                     ci.carIdx = i;
                     ci.delta = delta;
-                    ci.deltaMts = deltaMts;
                     ci.lapDelta = lapDelta;
                     ci.lapDistPct = ir_CarIdxLapDistPct.getFloat(i);
+                    ci.wrappedSum = wrappedSum;
                     ci.pitAge = ir_CarIdxLap.getInt(i) - car.lastLapInPits;
                     ci.last = ir_CarIdxLastLapTime.getFloat(i);
                     relatives.push_back( ci );
@@ -173,7 +176,7 @@ class OverlayRelative : public Overlay
 
             // Sort by lap % completed, in case deltas are a bit desynced
             std::sort( relatives.begin(), relatives.end(), 
-                []( const CarInfo& a, const CarInfo&b ) {return a.deltaMts > b.deltaMts;} );
+                []( const CarInfo& a, const CarInfo&b ) {return a.lapDistPct + a.wrappedSum > b.lapDistPct + b.wrappedSum ;} );
 
             // Locate our driver's index in the new array
             int selfCarInfoIdx = -1;
