@@ -103,8 +103,8 @@ static LRESULT CALLBACK windowProc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
 // Overlay
 //
 
-Overlay::Overlay( const std::string name )
-    : m_name( name )
+Overlay::Overlay( const std::string name, Microsoft::WRL::ComPtr<ID3D11Device> d3dDevice)
+    : m_name( name ), m_d3dDevice( d3dDevice )
 {}
 
 Overlay::~Overlay()
@@ -156,9 +156,6 @@ void Overlay::enable( bool on )
 #else
         const bool isdebug = false;
 #endif
-
-        // D3D11 device
-        HRCHECK(D3D11CreateDevice( NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_SINGLETHREADED | D3D11_CREATE_DEVICE_BGRA_SUPPORT, NULL, 0, D3D11_SDK_VERSION, &m_d3dDevice, NULL, NULL ));
 
         // DXGI device
         ComPtr<IDXGIDevice> dxgiDevice;
@@ -229,7 +226,6 @@ void Overlay::enable( bool on )
         m_renderTarget.Reset();
         m_d2dFactory.Reset();
         m_swapChain.Reset();
-        m_d3dDevice.Reset();
 
         DestroyWindow( m_hwnd );
         m_hwnd = 0;

@@ -37,8 +37,8 @@ class OverlayRelative : public Overlay
 
         const float DefaultFontSize = 15.3f;
 
-        OverlayRelative()
-            : Overlay("OverlayRelative")
+        OverlayRelative(Microsoft::WRL::ComPtr<ID3D11Device> d3dDevice)
+            : Overlay("OverlayRelative", d3dDevice)
         {}
 
     protected:
@@ -91,7 +91,7 @@ class OverlayRelative : public Overlay
         }
 
         virtual void onUpdate()
-        {            
+        {
             struct CarInfo {
                 int     carIdx = 0;
                 float   delta = 0;

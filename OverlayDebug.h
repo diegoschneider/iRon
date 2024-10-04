@@ -35,7 +35,7 @@ class OverlayDebug : public Overlay
 {
 public:
 
-    OverlayDebug();
+    OverlayDebug(Microsoft::WRL::ComPtr<ID3D11Device> d3dDevice);
     virtual void onEnable();
     virtual void onConfigChanged();
     virtual void onUpdate();

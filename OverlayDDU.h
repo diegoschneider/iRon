@@ -38,8 +38,8 @@ class OverlayDDU : public Overlay
 
         const float DefaultFontSize = 17;
 
-        OverlayDDU()
-            : Overlay("OverlayDDU")
+        OverlayDDU(Microsoft::WRL::ComPtr<ID3D11Device> d3dDevice)
+            : Overlay("OverlayDDU", d3dDevice)
         {}
 
        #ifdef _DEBUG

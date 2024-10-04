@@ -78,8 +78,8 @@ void dbg( const char* fmt, ... )
 }
 
 
-OverlayDebug::OverlayDebug()
-    : Overlay("OverlayDebug")
+OverlayDebug::OverlayDebug(Microsoft::WRL::ComPtr<ID3D11Device> d3dDevice)
+    : Overlay("OverlayDebug", d3dDevice)
 {}
 
 void OverlayDebug::onEnable()

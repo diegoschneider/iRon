@@ -43,8 +43,8 @@ public:
 
     enum class Columns { POSITION, CAR_NUMBER, NAME, GAP, BEST, LAST, LICENSE, IRATING, CAR_BRAND, PIT, DELTA, L5, POSITIONS_GAINED };
 
-    OverlayStandings(map<string, IWICFormatConverter*> mapa)
-        : Overlay("OverlayStandings")
+    OverlayStandings(Microsoft::WRL::ComPtr<ID3D11Device> d3dDevice, map<string, IWICFormatConverter*> mapa)
+        : Overlay("OverlayStandings", d3dDevice)
     {
         avgL5Times.reserve(IR_MAX_CARS);
 

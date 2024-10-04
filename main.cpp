@@ -46,6 +46,7 @@ SOFTWARE.
 #include "OverlayStandings.h"
 #include "OverlayDebug.h"
 #include "OverlayDDU.h"
+#include "util.h"
 
 #ifdef _DEBUG
     //#define _DEBUG_DUMP_VARS
@@ -225,15 +226,21 @@ int main()
     printf("Happy Racing!\n");
     printf("====================================================================================\n\n");
 
+    // Create D3D Device
+    Microsoft::WRL::ComPtr<ID3D11Device> m_d3dDevice;
+    // D3D11 device
+    HRCHECK(D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_SINGLETHREADED | D3D11_CREATE_DEVICE_BGRA_SUPPORT, NULL, 0, D3D11_SDK_VERSION, &m_d3dDevice, NULL, NULL));
+
     // Create overlays
     vector<Overlay*> overlays;
-    overlays.push_back( new OverlayCover() );
-    overlays.push_back( new OverlayRelative() );
-    overlays.push_back( new OverlayInputs() );
-    overlays.push_back( new OverlayStandings( mapa ) );
-    overlays.push_back( new OverlayDDU() );
+    overlays.push_back( new OverlayCover(m_d3dDevice) );
+    overlays.push_back( new OverlayRelative(m_d3dDevice) );
+    overlays.push_back( new OverlayInputs(m_d3dDevice) );
+    overlays.push_back( new OverlayStandings(m_d3dDevice, mapa ) );
+    overlays.push_back( new OverlayDDU(m_d3dDevice) );
+
 #ifdef _DEBUG
-    overlays.push_back( new OverlayDebug() );
+    overlays.push_back( new OverlayDebug(m_d3dDevice) );
 #endif
 
     ConnectionStatus  status   = ConnectionStatus::UNKNOWN;
