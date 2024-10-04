@@ -30,7 +30,7 @@ class OverlayCover : public Overlay
 {
     public:
 
-        OverlayCover()
-            : Overlay("OverlayCover")
+        OverlayCover(Microsoft::WRL::ComPtr<ID3D11Device> d3dDevice)
+            : Overlay("OverlayCover", d3dDevice)
         {}
 };

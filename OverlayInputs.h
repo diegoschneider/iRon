@@ -32,8 +32,8 @@ class OverlayInputs : public Overlay
 {
     public:
 
-        OverlayInputs()
-            : Overlay("OverlayInputs")
+        OverlayInputs(Microsoft::WRL::ComPtr<ID3D11Device> d3dDevice)
+            : Overlay("OverlayInputs", d3dDevice)
         {}
 
     protected:

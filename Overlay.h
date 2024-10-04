@@ -38,7 +38,7 @@ class Overlay
 {
     public:
 
-                        Overlay( const std::string name );
+                        Overlay( const std::string name, Microsoft::WRL::ComPtr<ID3D11Device> d3dDevice);
         virtual         ~Overlay();
 
         std::string     getName() const;
