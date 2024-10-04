@@ -99,7 +99,7 @@ protected:
         if (g_cfg.getBool(m_name, "show_car_brand", true))
             m_columns.add( (int)Columns::CAR_BRAND,  30, fontSize / 2);
 
-        m_columns.add( (int)Columns::POSITIONS_GAINED, computeTextExtent(L"↑6", m_dwriteFactory.Get(), m_textFormat.Get()).x, fontSize / 2);
+        m_columns.add( (int)Columns::POSITIONS_GAINED, computeTextExtent(L"▲99", m_dwriteFactory.Get(), m_textFormat.Get()).x, fontSize / 2);
         m_columns.add( (int)Columns::GAP,        computeTextExtent(L"999.9", m_dwriteFactory.Get(), m_textFormat.Get()).x, fontSize / 2 );
         m_columns.add( (int)Columns::BEST,       computeTextExtent( L"99:99.999", m_dwriteFactory.Get(), m_textFormat.Get() ).x, fontSize/2 );
 
@@ -558,12 +558,12 @@ protected:
                         swprintf(s, _countof(s), L"▼");
                         m_brush->SetColor(deltaNegCol);
                     }
-                    m_text.render(m_renderTarget.Get(), s, m_textFormat.Get(), xoff + clm->textL, xoff + clm->textR, y, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_TRAILING);
+                    m_text.render(m_renderTarget.Get(), s, m_textFormat.Get(), xoff + clm->textL, xoff + clm->textR, y, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_LEADING);
 
                     m_brush->SetColor(textCol);
                     swprintf(s, _countof(s), L"%d", abs(ci.positionsChanged));
 
-                    m_text.render(m_renderTarget.Get(), s, m_textFormat.Get(), xoff + clm->textL, 17 + xoff + clm->textR, y, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_TRAILING);
+                    m_text.render(m_renderTarget.Get(), s, m_textFormat.Get(), xoff + clm->textL, xoff + clm->textR, y, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_TRAILING);
                 }
                 
             }
