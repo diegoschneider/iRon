@@ -619,11 +619,12 @@ ConnectionStatus ir_tick()
         // SoF
         double sof = 0;
         int cnt = 0;
+        int ownClass = ir_PlayerCarClass.getInt();
         for( int i=0; i<IR_MAX_CARS; ++i )
         {
             const Car& car = ir_session.cars[i];
 
-            if( car.isPaceCar || car.isSpectator || car.userName.empty() )
+            if( car.isPaceCar || car.isSpectator || car.userName.empty() || car.classId != ownClass)
                 continue;
 
             sof += car.irating;

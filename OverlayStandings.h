@@ -53,7 +53,7 @@ public:
             avgL5Times[i].reserve(5);
 
             for (int j = 0; j < 5; ++j) {
-                avgL5Times[i].push_back(0.0);
+                avgL5Times[i].emplace_back(0.0);
             }
         }
 
@@ -379,13 +379,14 @@ protected:
         //printf("Cars to draw : %d", carsToDraw);
         //std::cout << std::endl;
         int drawnCars = 0;
+        int ownClass = ir_PlayerCarClass.getInt();
         int selfClassDrivers = 0;
         bool skippedCars = false;
         for( int i=0; i<(int)carInfo.size(); ++i )
         {
             y = 2*yoff + lineHeight/2 + (drawnCars+1)*lineHeight;
             
-            if (ir_CarIdxClass.getInt(carInfo[i].carIdx) != ir_PlayerCarClass.getInt()) {
+            if (carInfo[i].classIdx != ownClass) {
                 continue;
             }
 

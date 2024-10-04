@@ -125,7 +125,6 @@ class OverlayRelative : public Overlay
                     float delta = 0;
                     int   lapDelta = lapcountCar - lapcountSelf;
 
-                    const float L = ir_estimateLaptime();
                     const float LClassRatio = car.carClassEstLapTime / ownClassEstLaptime;
                     const float CarEstLapTime = ir_CarIdxEstTime.getFloat(i) / LClassRatio;
                     const float CarLapDistPct = ir_CarIdxLapDistPct.getFloat(i);
@@ -477,7 +476,7 @@ class OverlayRelative : public Overlay
 
         virtual bool canEnableWhileNotDriving() const
         {
-            return g_cfg.getBool(m_name, "enabled_while_not_driving", true);
+            return g_cfg.getBool(m_name, "enabled_while_not_driving", false);
         }
 
     protected:

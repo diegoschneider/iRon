@@ -455,7 +455,7 @@ class OverlayDDU : public Overlay
                 m_text.render( m_renderTarget.Get(), L"Rem", m_textFormatSmall.Get(), m_boxFuel.x0+xoff, m_boxFuel.x1, m_boxFuel.y0+m_boxFuel.h*4.6f/12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_LEADING );
                 m_text.render( m_renderTarget.Get(), L"Per", m_textFormatSmall.Get(), m_boxFuel.x0+xoff, m_boxFuel.x1, m_boxFuel.y0+m_boxFuel.h*6.4f/12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_LEADING );
                 m_text.render(m_renderTarget.Get(), L"Fin+", m_textFormatSmall.Get(), m_boxFuel.x0 + xoff, m_boxFuel.x1, m_boxFuel.y0 + m_boxFuel.h * 8.2f / 12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_LEADING);
-                if (targetLap == -1) {
+                if (targetLap == 0) {
                     m_text.render(m_renderTarget.Get(), L"Add", m_textFormatSmall.Get(), m_boxFuel.x0 + xoff, m_boxFuel.x1, m_boxFuel.y0 + m_boxFuel.h * 10.0f / 12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_LEADING);
                 }
                 else {
@@ -542,7 +542,7 @@ class OverlayDDU : public Overlay
                     
                     float toFinish;
 
-                    if (targetLap == -1) {
+                    if (targetLap == 0) {
                         toFinish = std::max(0.0f, remainingLaps * perLapConsEst - (remainingFuel - fuelReserveMargin));
                     } else {
                         toFinish = (targetLap+1-currentLap) * perLapConsEst - (m_lapStartRemainingFuel - fuelReserveMargin);
@@ -562,7 +562,7 @@ class OverlayDDU : public Overlay
 
                 // Add
                 float add = ir_PitSvFuel.getFloat();
-                if (targetLap != -1) {
+                if (targetLap != 0) {
 
                     float targetFuel = (m_lapStartRemainingFuel - fuelReserveMargin) / ( targetLap + 1 - currentLap);
 
