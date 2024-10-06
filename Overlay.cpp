@@ -28,6 +28,9 @@ SOFTWARE.
 #include "Overlay.h"
 #include "Config.h"
 
+#ifdef _DEBUG and _DEBUG_OVERLAY_TIME
+    #include "OverlayDebug.h"
+#endif
 using namespace Microsoft::WRL;
 
 static const int ResizeBorderWidth = 25;
@@ -291,6 +294,9 @@ void Overlay::update()
     const float h = (float)m_height;
     const float cornerRadius = g_cfg.getFloat( m_name, "corner_radius", m_name=="OverlayInputs"?2.0f:6.0f );
 
+#ifdef _DEBUG and _DEBUG_OVERLAY_TIME
+    debugTimeStart = std::chrono::high_resolution_clock::now();
+#endif
     // Clear/draw background
     if( !hasCustomBackground() )
     {
@@ -324,6 +330,15 @@ void Overlay::update()
     }
 
     HRCHECK(m_swapChain->Present( 1, 0 ));
+
+#ifdef _DEBUG and _DEBUG_OVERLAY_TIME
+    using micro = std::chrono::microseconds;
+    debugTimeEnd = std::chrono::high_resolution_clock::now();
+    debugTimeDiff = std::chrono::duration_cast<micro>(debugTimeEnd - debugTimeStart).count();
+    debugTimeAvg = (debugTimeAvg / 10) * 9 + (float)(debugTimeDiff) / 10;
+    dbg("%s loop took %.4f (%i) microseconds", m_name.c_str(), debugTimeAvg, debugTimeDiff);
+    debugTimeStart = std::chrono::high_resolution_clock::now();
+#endif
 }
 
 void Overlay::setWindowPosAndSize( int x, int y, int w, int h, bool callSetWindowPos )

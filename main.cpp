@@ -47,6 +47,11 @@ SOFTWARE.
 #include "OverlayDebug.h"
 #include "OverlayDDU.h"
 
+#ifdef _DEBUG
+    //#define _DEBUG_DUMP_VARS
+    #include <chrono>
+    #define _DEBUG_OVERLAY_TIME
+#endif
 using namespace Microsoft::WRL;
 using namespace std;
 
@@ -179,6 +184,13 @@ static void LoadCarIcons(map<string, IWICFormatConverter*>& mapa) {
 
 int main()
 {
+#ifdef _DEBUG
+    auto debugtime_start = std::chrono::high_resolution_clock::now();
+    auto debugtime_finish = debugtime_start;
+    bool debugtimer_started = false;
+    float debugtimeavg = 0.0f;
+    long long debugtimediff;
+#endif
     // Bump priority up so we get time from the sim
     SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
@@ -226,7 +238,12 @@ int main()
 
     ConnectionStatus  status   = ConnectionStatus::UNKNOWN;
     bool              uiEdit   = false;
-    unsigned          frameCnt = 0;
+    unsigned          frameCnt = 0;    
+#ifdef _DEBUG
+    // Added in debug only for now
+    std::chrono::steady_clock::time_point loopTimeStart, loopTimeEnd;
+    long long loopTimeDiff;
+#endif
 
     while( true )
     {
@@ -235,6 +252,10 @@ int main()
 
         // Refresh connection and session info
         status = ir_tick();
+#ifdef _DEBUG
+        // Added in debug only for now
+        loopTimeStart = std::chrono::high_resolution_clock::now();
+#endif
         if( status != prevStatus )
         {
             if( status == ConnectionStatus::DISCONNECTED )
@@ -244,6 +265,20 @@ int main()
 
             // Enable user-selected overlays, but only if we're driving
             handleConfigChange( overlays, status );
+
+#ifdef _DEBUG and _DEBUG_DUMP_VARS
+            // Raw-dogging the header because we are hardcore like that
+            const irsdk_header* pHeader = irsdk_getHeader();
+            if (pHeader != nullptr) {
+                const irsdk_varHeader* pVar;
+
+                for (int index = 0; index < pHeader->numVars; index++)
+                {
+                pVar = irsdk_getVarHeaderEntry(index);
+                    std::cout << pVar->name << "\n";
+                }
+            }
+#endif
         }
 
         if( ir_session.sessionType != prevSessionType )
@@ -253,7 +288,7 @@ int main()
         }
 
         dbg( "connection status: %s, session type: %s, session state: %d, pace mode: %d, on track: %d, flags: 0x%X", ConnectionStatusStr[(int)status], SessionTypeStr[(int)ir_session.sessionType], ir_SessionState.getInt(), ir_PaceMode.getInt(), (int)ir_IsOnTrackCar.getBool(), ir_SessionFlags.getInt() );
-
+        
         // Update/render overlays
         {
             if( !g_cfg.getBool("General", "performance_mode_30hz", false) )
@@ -340,6 +375,24 @@ int main()
         }
 
         frameCnt++;
+        
+#ifdef _DEBUG
+        // Added in debug for now
+        using micro = std::chrono::microseconds;
+        loopTimeEnd = std::chrono::high_resolution_clock::now();
+        loopTimeDiff = std::chrono::duration_cast<micro>(loopTimeEnd - loopTimeStart).count();
+
+        // This should remain in debug - START
+        if (!debugtimer_started) {
+            debugtimediff = std::chrono::duration_cast<micro>(loopTimeEnd - debugtime_start).count();
+            std::cout << "First run took " << debugtimediff << " microseconds\n";
+            debugtimer_started = true;
+        }
+        debugtimeavg = (debugtimeavg / 10) * 9 + (float)(loopTimeDiff) / 10;
+        dbg("Main loop took %.4f (%i) microseconds", debugtimeavg, loopTimeDiff);
+        debugtime_start = std::chrono::high_resolution_clock::now();
+        // This should remain in debug - END
+#endif
     }
 
     for( Overlay* o : overlays )

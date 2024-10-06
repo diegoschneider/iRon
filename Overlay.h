@@ -34,6 +34,10 @@ SOFTWARE.
 #include <wrl.h>
 #include "util.h"
 
+#ifdef _DEBUG and _DEBUG_OVERLAY_TIME
+    #include <chrono>
+#endif
+
 class Overlay
 {
     public:
@@ -77,6 +81,12 @@ class Overlay
         int             m_ypos = 0;
         int             m_width = 0;
         int             m_height = 0;
+#ifdef _DEBUG and _DEBUG_OVERLAY_TIME
+        std::chrono::steady_clock::time_point debugTimeStart = std::chrono::high_resolution_clock::now();
+        std::chrono::steady_clock::time_point debugTimeEnd = debugTimeStart;
+        long long debugTimeDiff = 0;
+        float debugTimeAvg = 0.0f;
+#endif
 
         Microsoft::WRL::ComPtr<ID3D11Device>            m_d3dDevice;
         Microsoft::WRL::ComPtr<IDXGISwapChain1>         m_swapChain;

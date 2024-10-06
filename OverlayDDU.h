@@ -587,19 +587,42 @@ class OverlayDDU : public Overlay
 
             // Tires
             {
-                const float lf = 100.0f * std::min(std::min( ir_LFwearL.getFloat(), ir_LFwearM.getFloat() ), ir_LFwearR.getFloat() );
-                const float rf = 100.0f * std::min(std::min( ir_RFwearL.getFloat(), ir_RFwearM.getFloat() ), ir_RFwearR.getFloat() );
-                const float lr = 100.0f * std::min(std::min( ir_LRwearL.getFloat(), ir_LRwearM.getFloat() ), ir_LRwearR.getFloat() );
-                const float rr = 100.0f * std::min(std::min( ir_RRwearL.getFloat(), ir_RRwearM.getFloat() ), ir_RRwearR.getFloat() );
+                const float lf = 100.0f * std::min(std::min(ir_LFwearL.getFloat(), ir_LFwearM.getFloat()), ir_LFwearR.getFloat());
+                const float rf = 100.0f * std::min(std::min(ir_RFwearL.getFloat(), ir_RFwearM.getFloat()), ir_RFwearR.getFloat());
+                const float lr = 100.0f * std::min(std::min(ir_LRwearL.getFloat(), ir_LRwearM.getFloat()), ir_LRwearR.getFloat());
+                const float rr = 100.0f * std::min(std::min(ir_RRwearL.getFloat(), ir_RRwearM.getFloat()), ir_RRwearR.getFloat());
+
+                int tireChangeMask = 0;
+                
+                // Open wheelers, cars with ONE Replace box
+                if (ir_dpTireChange.isValid()) {
+                    tireChangeMask = ir_dpTireChange.getInt() * 0xF;
+                }
+                // Oval cars, L/R boxes
+                else if (ir_dpLTireChange.isValid()) {
+                    tireChangeMask = 
+                        ir_dpLTireChange.getInt() * (irsdk_LFTireChange + irsdk_LRTireChange)
+                        + 
+                        ir_dpRTireChange.getInt() * (irsdk_RFTireChange + irsdk_RRTireChange);
+                }
+
+                // Any other, if we can change individuals, we can change all
+                else if (ir_dpLFTireChange.isValid()) {
+                    tireChangeMask =
+                        ir_dpLFTireChange.getInt() * irsdk_LFTireChange
+                        + ir_dpLRTireChange.getInt() * irsdk_LRTireChange
+                        + ir_dpRFTireChange.getInt() * irsdk_RFTireChange
+                        + ir_dpRRTireChange.getInt() * irsdk_RRTireChange;
+                }
 
                 // Left
-                if( ir_dpLFTireChange.getFloat() )
+                if(tireChangeMask & irsdk_LFTireChange)
                     m_brush->SetColor( serviceCol );
                 else
                     m_brush->SetColor( textCol );
                 swprintf( s, _countof(s), L"%d", (int)(lf+0.5f) );
                 m_text.render( m_renderTarget.Get(), s, m_textFormatSmall.Get(), m_boxTires.x0+20, m_boxTires.x0+m_boxTires.w/2, m_boxTires.y0+m_boxTires.h*1.0f/3.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_CENTER );
-                if (ir_dpLRTireChange.getFloat())
+                if (tireChangeMask & irsdk_LRTireChange)
                     m_brush->SetColor(serviceCol);
                 else
                     m_brush->SetColor(textCol);
@@ -607,13 +630,13 @@ class OverlayDDU : public Overlay
                 m_text.render( m_renderTarget.Get(), s, m_textFormatSmall.Get(), m_boxTires.x0+20, m_boxTires.x0+m_boxTires.w/2, m_boxTires.y0+m_boxTires.h*2.0f/3.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_CENTER );
 
                 // Right
-                if( ir_dpRFTireChange.getFloat() )
+                if(tireChangeMask & irsdk_RFTireChange)
                     m_brush->SetColor( serviceCol );
                 else
                     m_brush->SetColor( textCol );
                 swprintf( s, _countof(s), L"%d", (int)(rf+0.5f) );
                 m_text.render( m_renderTarget.Get(), s, m_textFormatSmall.Get(), m_boxTires.x0+m_boxTires.w/2, m_boxTires.x1-20, m_boxTires.y0+m_boxTires.h*1.0f/3.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_CENTER );
-                if (ir_dpRRTireChange.getFloat())
+                if (tireChangeMask & irsdk_RRTireChange)
                     m_brush->SetColor(serviceCol);
                 else
                     m_brush->SetColor(textCol);
