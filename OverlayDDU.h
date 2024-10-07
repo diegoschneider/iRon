@@ -226,7 +226,7 @@ class OverlayDDU : public Overlay
             const bool   sessionIsTimeLimited  = ir_SessionLapsTotal.getInt() == 32767 && ir_SessionTimeRemain.getDouble()<48.0*3600.0;  // most robust way I could find to figure out whether this is a time-limited session (info in session string is often misleading)
             const double remainingSessionTime  = sessionIsTimeLimited ? ir_SessionTimeRemain.getDouble() : -1;
             const int    remainingLaps         = sessionIsTimeLimited ? int(0.5+remainingSessionTime/ir_estimateLaptime()) : (ir_SessionLapsRemainEx.getInt() != 32767 ? ir_SessionLapsRemainEx.getInt() : -1);
-            const int    targetLap             = g_cfg.getInt(m_name, "fuel_target_lap", -1);
+            const int    targetLap             = g_cfg.getInt(m_name, "fuel_target_lap", 0);
             const int    currentLap            = ir_isPreStart() ? 0 : std::max(0,ir_CarIdxLap.getInt(carIdx));
             const bool   lapCountUpdated       = currentLap != m_prevCurrentLap;
             m_prevCurrentLap = currentLap;
