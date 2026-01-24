@@ -135,7 +135,7 @@ protected:
     virtual void onUpdate()
     {
 
-        // Wait until we get car data
+        // Return if no session data
         if (!ir_session->initialized) return;
 
         struct CarInfo {
@@ -252,7 +252,14 @@ protected:
         const int playerCarIdx = ir_PlayerCarIdx.getInt();
         const int ciSelfIdx = playerCarIdx > 0 ? hasPacecar ? playerCarIdx - 1 : playerCarIdx : 0; // TODO: Sometimes this fails in Release mode?
         //if (!playerCarIdx) return; // Couldn't get player idx, probably JUST loaded into a session
-        const CarInfo ciSelf = carInfo[ciSelfIdx];
+        const CarInfo ciSelf;
+        try {
+            const CarInfo ciSelf = carInfo[ciSelfIdx];
+        }
+        catch(std::exception e) {
+            printf("OverlayStandings: Error getting carInfo[ciSelfIdx=%d]", ciSelfIdx);
+            return;
+        }
         // Sometimes the offset is not necessary. In a free practice session it didn't need it, but in a qualifying it did
         //const CarInfo ciSelf = carInfo[ir_session->driverCarIdx];
         

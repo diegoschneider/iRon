@@ -233,6 +233,9 @@ class OverlayDDU : public Overlay
 
         virtual void onUpdate()
         {
+            // Return if no session data
+            if (!ir_session->initialized) return;
+
             const float  fontSize           = g_cfg.getFloat( m_name, "font_size", DefaultFontSize );
             const float4 outlineCol         = g_cfg.getFloat4( m_name, "outline_col", float4(0.7f,0.7f,0.7f,0.9f) );
             const float4 textCol            = g_cfg.getFloat4( m_name, "text_col", float4(1,1,1,0.9f) );
@@ -245,14 +248,16 @@ class OverlayDDU : public Overlay
             const float4 pitCol             = g_cfg.getFloat4( m_name, "pit_col", float4(0, 0.8f, 0, 0.6f) );
 
             const int  carIdx   = ir_session->driverCarIdx;
+            const int selfClassIdx = ir_getClassId(carIdx);
             const bool imperial = ir_DisplayUnits.getInt() == 0;
 
             const DWORD tickCount = GetTickCount();
 
-            // Figure out who's P1
+            // Figure out who's P1 in own class
             int p1carIdx = -1;
             for( int i=0; i<IR_MAX_CARS; ++i )
             {
+                if (ir_getClassId(i) != selfClassIdx) continue;
                 if( ir_getPosition(i) == 1 ) {
                     p1carIdx = i;
                     break;
@@ -260,9 +265,10 @@ class OverlayDDU : public Overlay
             }
 
             // General lap info
+
             const bool   sessionIsTimeLimited  = ir_SessionLapsTotal.getInt() == 32767 && ir_SessionTimeRemain.getDouble()<48.0*3600.0;  // most robust way I could find to figure out whether this is a time-limited session (info in session string is often misleading)
             const double remainingSessionTime  = sessionIsTimeLimited ? ir_SessionTimeRemain.getDouble() : -1;
-            const int    remainingLaps         = sessionIsTimeLimited ? int(0.5+remainingSessionTime/ir_estimateLaptime()) : (ir_SessionLapsRemainEx.getInt() != 32767 ? ir_SessionLapsRemainEx.getInt() : -1);
+            const float    remainingLaps = sessionIsTimeLimited ? remainingSessionTime / ir_LapLastLapTime.getFloat() : float(ir_SessionLapsRemainEx.getInt() != 32767 ? ir_SessionLapsRemainEx.getInt() : -1);
             const int    targetLap             = g_cfg.getInt(m_name, "fuel_target_lap", 0);
             const int    currentLap            = ir_isPreStart() ? 0 : std::max(0,ir_CarIdxLap.getInt(carIdx));
             const bool   lapCountUpdated       = currentLap != m_prevCurrentLap;
@@ -384,9 +390,9 @@ class OverlayDDU : public Overlay
                 if( remainingLaps < 0 )
                     sprintf( lapsStr, "--" );
                 else if( sessionIsTimeLimited )
-                    sprintf( lapsStr, "~%d", remainingLaps );
+                    sprintf( lapsStr, "~%.2f", remainingLaps );
                 else
-                    sprintf( lapsStr, "%d", remainingLaps );
+                    sprintf( lapsStr, "%.0f", remainingLaps );
                 swprintf( s, _countof(s), L"%S", lapsStr );
                 m_text.render( m_renderTarget.Get(), s, m_textFormatLarge.Get(), m_boxLaps.x0, m_boxLaps.x1, m_boxLaps.y0+m_boxLaps.h*0.55f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_CENTER );
 
@@ -571,7 +577,7 @@ class OverlayDDU : public Overlay
                     float val = remainingFuel;
                     if( imperial )
                         val *= 0.264172f;
-                    swprintf( s, _countof(s), imperial ? L"%.2f gl" : L"%.2f lt", val );
+                    swprintf( s, _countof(s), imperial ? L"%.2f gl" : L"%.3f lt", val );
                     m_text.render( m_renderTarget.Get(), s, m_textFormat.Get(), m_boxFuel.x0, m_boxFuel.x1-xoff, m_boxFuel.y0+m_boxFuel.h*5.3f/12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_TRAILING );
                 }
 
@@ -581,7 +587,7 @@ class OverlayDDU : public Overlay
                     float val = avgPerLap;
                     if( imperial )
                         val *= 0.264172f;
-                    swprintf( s, _countof(s), imperial ? L"%.2f gl" : L"%.2f lt", val );
+                    swprintf( s, _countof(s), imperial ? L"%.2f gl" : L"%.3f lt", val );
                     m_text.render( m_renderTarget.Get(), s, m_textFormat.Get(), m_boxFuel.x0, m_boxFuel.x1-xoff, m_boxFuel.y0+m_boxFuel.h*7.1f/12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_TRAILING );
                 }
                 else {
@@ -608,7 +614,7 @@ class OverlayDDU : public Overlay
 
                     if( imperial )
                         toFinish *= 0.264172f;
-                    swprintf( s, _countof(s), imperial ? L"%3.2f gl" : L"%3.2f lt", toFinish );
+                    swprintf( s, _countof(s), imperial ? L"%3.2f gl" : L"%3.3f lt", toFinish );
                     m_text.render( m_renderTarget.Get(), s, m_textFormat.Get(), m_boxFuel.x0, m_boxFuel.x1-xoff, m_boxFuel.y0+m_boxFuel.h*8.9f/12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_TRAILING );
                     m_brush->SetColor( textCol );
                 }
@@ -621,7 +627,7 @@ class OverlayDDU : public Overlay
 
                     if (imperial)
                         targetFuel *= 0.264172f;
-                    swprintf(s, _countof(s), imperial ? L"%3.2f gl" : L"%3.2f lt", targetFuel);
+                    swprintf(s, _countof(s), imperial ? L"%3.2f gl" : L"%3.3f lt", targetFuel);
                     m_text.render(m_renderTarget.Get(), s, m_textFormat.Get(), m_boxFuel.x0, m_boxFuel.x1 - xoff, m_boxFuel.y0 + m_boxFuel.h * 10.7f / 12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_TRAILING);
                     m_brush->SetColor(textCol);
                 }
@@ -632,7 +638,7 @@ class OverlayDDU : public Overlay
 
                     if( imperial )
                         add *= 0.264172f;
-                    swprintf( s, _countof(s), imperial ? L"%3.2f gl" : L"%3.2f lt", add );
+                    swprintf( s, _countof(s), imperial ? L"%3.2f gl" : L"%3.3f lt", add );
                     m_text.render( m_renderTarget.Get(), s, m_textFormat.Get(), m_boxFuel.x0, m_boxFuel.x1-xoff, m_boxFuel.y0+m_boxFuel.h*10.7f/12.0f, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_TRAILING );
                     m_brush->SetColor( textCol );
                 }

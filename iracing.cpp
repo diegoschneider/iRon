@@ -27,6 +27,9 @@ SOFTWARE.
 #include "TelemetryHandler.h"
 #include "string"
 
+#if defined(_DEBUG) or defined(DEBUG_OVERLAY_TIME)
+    #include <chrono>
+#endif
 irsdkCVar ir_SessionTime("SessionTime");    // double[1] Seconds since session start (s)
 irsdkCVar ir_SessionTick("SessionTick");    // int[1] Current update number ()
 irsdkCVar ir_SessionNum("SessionNum");    // int[1] Session number ()
@@ -702,12 +705,18 @@ ConnectionStatus ir_tick()
         }
         else {
 
+#if defined(_DEBUG) or defined(DEBUG_OVERLAY_TIME)
             std::chrono::steady_clock::time_point debugTimeStart = std::chrono::high_resolution_clock::now();
+#endif
+
             updateSessionStringData(irsdk.getSessionStr(), &ir_session_data[!ir_session_cur]);
+
+#if defined(_DEBUG) or defined(DEBUG_OVERLAY_TIME)
             std::chrono::steady_clock::time_point debugTimeEnd = std::chrono::high_resolution_clock::now();
             
             long long debugTimeDiff = std::chrono::duration_cast<std::chrono::microseconds>(debugTimeEnd - debugTimeStart).count();
             printf("YAML Parsing took %.5d microseconds\n", debugTimeDiff);
+#endif
 
         }
 
