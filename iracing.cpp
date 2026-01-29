@@ -396,13 +396,14 @@ void updateSessionStringData(const char* sessionYaml, Session* ir_session_pointe
     char path[256];
 
 
+    // Telemetry file change detection for TelemetryHandler
     std::string telemetry_file;
     parseYamlStr(&sessionYaml[16], "TelemetryOptions:TelemetryDiskFile:", telemetry_file);
     if (telemetry_file[0] != 0) { // If there is a telemetry file active, update it
-        telemetry_file.replace(1, 1, ":"); // TODO: parseYamlStr removes the ':' char
+        telemetry_file.replace(1, 1, ":"); // TODO: parseYamlStr removes the ':' char from "C:\Users\..."
         g_telemetryHandler.updateTelemetryFile(telemetry_file);
     }
-    else g_telemetryHandler.mergeTelemetry(); // TODO: mergeTelemetry xd
+    else g_telemetryHandler.finish(); // Finalize telemetry merge
 
     // Weekend info
     parseYamlInt(sessionYaml, "WeekendInfo:SubSessionID:", &ir_session_pointer->subsessionId);

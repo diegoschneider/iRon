@@ -28,7 +28,6 @@ SOFTWARE.
 #include <algorithm>
 #include <string>
 #include "Overlay.h"
-//#include "iracing.h"
 #include "Config.h"
 #include "TelemetryHandler.h"
 //#include "OverlayDebug.h"
@@ -78,7 +77,7 @@ class OverlayTires : public Overlay
             m_columnWidth = computeTextExtent(L"999.9", m_dwriteFactory.Get(), m_textFormat.Get()).x;
             m_columns.add( (int)Columns::LL, m_columnWidth , m_fontSize/2 );
             m_columns.add( (int)Columns::LM, m_columnWidth , m_fontSize/2 );
-            m_columns.add( (int)Columns::LR, m_columnWidth , m_fontSize/2 );
+            m_columns.add( (int)Columns::LR, m_columnWidth , m_fontSize/2, m_fontSize );
             m_columns.add( (int)Columns::RL, m_columnWidth , m_fontSize/2 );
             m_columns.add( (int)Columns::RM, m_columnWidth , m_fontSize/2 );
             m_columns.add( (int)Columns::RR, m_columnWidth , m_fontSize/2 );
@@ -104,7 +103,9 @@ class OverlayTires : public Overlay
                 m_renderTarget->EndDraw();
                 return;
             }
-            TelemetryData* td = g_telemetryHandler.processTelemetry();
+            
+            // Process last telemetry data
+            TyreData* telemetry_data = g_telemetryHandler.getNextTyreData();
 
             m_columns.layout( (float)m_width - 20 );
             m_renderTarget->BeginDraw();
@@ -136,11 +137,11 @@ class OverlayTires : public Overlay
 
                     rectX = clm->textL;
                     r = { rectX, rectY, rectX+w, rectY+rectH };
-                    m_brush->SetColor( getTireColor(td->temp[axle][sect]) ); // temp
+                    m_brush->SetColor( getTireColor(telemetry_data->temp[axle][sect]) ); // temp
                     m_renderTarget->FillRectangle( &r, m_brush.Get() );
 
                     m_brush->SetColor( col );
-                    swprintf( s, _countof(s), L"%.1f", td->temp[axle][sect]); // temp
+                    swprintf( s, _countof(s), L"%.1f", telemetry_data->temp[axle][sect]); // temp
                     m_text.render( m_renderTarget.Get(), s, m_textFormat.Get(), clm->textL, clm->textR, tempY, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_CENTER );
 
 				}

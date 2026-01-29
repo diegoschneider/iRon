@@ -6,7 +6,7 @@
 #include "irsdk/irsdk_diskclient.h"
 
 
-static const int TH_MAX_BUFFERS = 64;
+static const int TH_MAX_BUFFERS = 60;
 
 void do_update_telemetry(const std::string path);
 
@@ -26,7 +26,7 @@ static const char* const TelemetryHandlerStr[2][6] = {
 	}
 };
 
-struct TelemetryData {
+struct TyreData {
 	float temp[2][6];
 };
 
@@ -34,7 +34,7 @@ class TelemetryReader
 {
 	public:
 		bool				init(const std::string path);
-		void				processTelemetry(TelemetryData &td);
+		void				getNextTyreData(TyreData &td);
 		void				skipExcessData();
 		void				finish();
 		
@@ -45,7 +45,7 @@ class TelemetryReader
 		int					m_telemetry_data_idx[2][6]; // Front/Rear, Left LMR / Right LMR
 		int					m_telemetry_buffer_idx = 0;
 		int					m_telemetry_buffer_maxidx = 0;
-		TelemetryData		m_telemetry_buffer[TH_MAX_BUFFERS];
+		TyreData			m_telemetry_buffer[TH_MAX_BUFFERS];
 
 };
 
@@ -53,10 +53,12 @@ class TelemetryWriter
 {
 	public:
 		bool init(const std::string path);
-		void processTelemetry();
+		bool append(const std::string path);
 		void finish();
+		
 	private:
 		irsdkDiskWriter		m_idk;
+		irsdkDiskClient		m_idk_client;
 		bool				m_ready = false;
 
 };
@@ -65,22 +67,24 @@ class TelemetryHandler
 {
 	public:
 		TelemetryHandler();
-		TelemetryData		getCurrentData();
 		void				updateTelemetryFile(const std::string path);
-		void				mergeTelemetry();
+		void				mergeTelemetry(const std::string path);
 		void				switchTelemetryReader();
-		TelemetryData*		processTelemetry();
+		TyreData*			getNextTyreData();
+		void				finish();
 
 	private:
-		TelemetryData		m_telemetry_data;
+		TyreData			m_tyre_data;
 		std::string			m_oldPath;
 		std::string			m_telemetryFinalPath;
 		std::thread			m_openTelemetryThread;
 		std::mutex			m_openTelemetryThread_mtx;
 
 		// The swapping telemetry readers
-		TelemetryReader		m_telemetryReader[2];
-		bool				m_telemetryReader_cur = 0;
+		TelemetryReader		m_telemetry_reader[2];
+		bool				m_telemetry_reader_cur = 0;
+
+		TelemetryWriter		m_telemetry_writer;
 };
 
 extern TelemetryHandler g_telemetryHandler;
