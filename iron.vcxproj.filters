@@ -15,10 +15,6 @@
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="Overlay.cpp" />
     <ClCompile Include="OverlayDebug.cpp" />
-    <ClCompile Include="TelemetryHandler.cpp" />
-    <ClCompile Include="irsdk\irsdk_diskclient.cpp">
-      <Filter>irsdk</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="irsdk">
@@ -47,11 +43,6 @@
     <ClInclude Include="OverlayDDU.h" />
     <ClInclude Include="OverlayCover.h" />
     <ClInclude Include="OverlayRadar.h" />
-    <ClInclude Include="irsdk\irsdk_diskclient.h">
-      <Filter>irsdk</Filter>
-    </ClInclude>
-    <ClInclude Include="TelemetryHandler.h" />
-    <ClInclude Include="OverlayTires.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="LICENSE" />

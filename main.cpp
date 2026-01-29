@@ -309,7 +309,7 @@ int main()
     while( true )
     {
         ConnectionStatus prevStatus       = status;
-        SessionType      prevSessionType  = ir_session->sessionType;
+        SessionType      prevSessionType  = g_ir_session->sessionType;
 
         // Refresh connection and session info
         status = ir_tick();
@@ -332,7 +332,7 @@ int main()
 #endif
         }
         
-        if( ir_session->sessionType != prevSessionType )
+        if( g_ir_session->sessionType != prevSessionType )
         {
             for( Overlay* o : overlays )
                 o->sessionChanged();
@@ -341,7 +341,7 @@ int main()
         // Tire disk telemetry update
         if ((frameCnt % 60) == 0 ) { // Every 60 frames, so 1 sec of delay
             if ( status == ConnectionStatus::DRIVING &&
-                (ir_session->sessionType != SessionType::QUALIFY && ir_session->sessionType != SessionType::RACE) 
+                (g_ir_session->sessionType != SessionType::QUALIFY && g_ir_session->sessionType != SessionType::RACE) 
             ) {
                 if (g_cfg.getBool("OverlayTires", "enabled", true)) {
                     irsdk_broadcastMsg(irsdk_BroadcastTelemCommand, irsdk_TelemCommand_Restart, 0, 0);
@@ -349,7 +349,7 @@ int main()
             }
         }
 
-        dbg( "connection status: %s, session type: %s, session state: %d, pace mode: %d, on track: %d, flags: 0x%X", ConnectionStatusStr[(int)status], SessionTypeStr[(int)ir_session->sessionType], ir_SessionState.getInt(), ir_PaceMode.getInt(), (int)ir_IsOnTrackCar.getBool(), ir_SessionFlags.getInt() );
+        dbg( "connection status: %s, session type: %s, session state: %d, pace mode: %d, on track: %d, flags: 0x%X", ConnectionStatusStr[(int)status], SessionTypeStr[(int)g_ir_session->sessionType], ir_SessionState.getInt(), ir_PaceMode.getInt(), (int)ir_IsOnTrackCar.getBool(), ir_SessionFlags.getInt() );
         
         // Update/render overlays
         {

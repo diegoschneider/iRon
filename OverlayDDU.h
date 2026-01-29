@@ -233,8 +233,8 @@ class OverlayDDU : public Overlay
 
         virtual void onUpdate()
         {
-            // Return if no session data
-            if (!ir_session->initialized) return;
+            // Wait until we get car data
+            if (!g_ir_session->initialized) return;
 
             const float  fontSize           = g_cfg.getFloat( m_name, "font_size", DefaultFontSize );
             const float4 outlineCol         = g_cfg.getFloat4( m_name, "outline_col", float4(0.7f,0.7f,0.7f,0.9f) );
@@ -247,7 +247,7 @@ class OverlayDDU : public Overlay
             const float4 shiftCol           = g_cfg.getFloat4( m_name, "shift_col", float4(1, 0.1f, 0.1f, 0.6f) );
             const float4 pitCol             = g_cfg.getFloat4( m_name, "pit_col", float4(0, 0.8f, 0, 0.6f) );
 
-            const int  carIdx   = ir_session->driverCarIdx;
+            const int  carIdx   = g_ir_session->driverCarIdx;
             const int selfClassIdx = ir_getClassId(carIdx);
             const bool imperial = ir_DisplayUnits.getInt() == 0;
 
@@ -268,7 +268,7 @@ class OverlayDDU : public Overlay
 
             const bool   sessionIsTimeLimited  = ir_SessionLapsTotal.getInt() == 32767 && ir_SessionTimeRemain.getDouble()<48.0*3600.0;  // most robust way I could find to figure out whether this is a time-limited session (info in session string is often misleading)
             const double remainingSessionTime  = sessionIsTimeLimited ? ir_SessionTimeRemain.getDouble() : -1;
-            const float    remainingLaps = sessionIsTimeLimited ? remainingSessionTime / ir_LapLastLapTime.getFloat() : float(ir_SessionLapsRemainEx.getInt() != 32767 ? ir_SessionLapsRemainEx.getInt() : -1);
+            const float  remainingLaps = sessionIsTimeLimited ? remainingSessionTime / ir_LapLastLapTime.getFloat() : float(ir_SessionLapsRemainEx.getInt() != 32767 ? ir_SessionLapsRemainEx.getInt() : -1);
             const int    targetLap             = g_cfg.getInt(m_name, "fuel_target_lap", 0);
             const int    currentLap            = ir_isPreStart() ? 0 : std::max(0,ir_CarIdxLap.getInt(carIdx));
             const bool   lapCountUpdated       = currentLap != m_prevCurrentLap;
@@ -276,7 +276,7 @@ class OverlayDDU : public Overlay
             if( lapCountUpdated )
                 m_lastLapChangeTickCount = tickCount;
 
-            dbg( "isUnlimitedTime: %d, isUnlimitedLaps: %d, rem laps: %d, total laps: %d, rem time: %f", (int)ir_session->isUnlimitedTime, (int)ir_session->isUnlimitedLaps, ir_SessionLapsRemainEx.getInt(), ir_SessionLapsTotal.getInt(), ir_SessionTimeRemain.getFloat() );
+            dbg( "isUnlimitedTime: %d, isUnlimitedLaps: %d, rem laps: %d, total laps: %d, rem time: %f", (int)g_ir_session->isUnlimitedTime, (int)g_ir_session->isUnlimitedLaps, ir_SessionLapsRemainEx.getInt(), ir_SessionLapsTotal.getInt(), ir_SessionTimeRemain.getFloat() );
 
             wchar_t s[512];
 
@@ -293,8 +293,8 @@ class OverlayDDU : public Overlay
             {
                 // which of the rpm numbers to use for high/low and colored light indicators was a bit of
                 // trial and error, since I'm not really sure what they're supposed to mean exactly
-                const float lo  = (ir_session->rpmIdle + ir_session->rpmSLFirst) / 2;
-                const float hi  = ir_session->rpmRedline;
+                const float lo  = (g_ir_session->rpmIdle + g_ir_session->rpmSLFirst) / 2;
+                const float hi  = g_ir_session->rpmRedline;
                 const float rpm = ir_RPM.getFloat();
                 const float rpmPct = (rpm-lo) / (hi-lo);
 
@@ -311,9 +311,9 @@ class OverlayDDU : public Overlay
                         m_renderTarget->DrawEllipse( &e, m_brush.Get() );
                     }
                     else {
-                        if( lightRpm < ir_session->rpmSLFirst )
+                        if( lightRpm < g_ir_session->rpmSLFirst )
                             m_brush->SetColor( float4(1,1,1,1) );
-                        else if( lightRpm < ir_session->rpmSLLast )
+                        else if( lightRpm < g_ir_session->rpmSLLast )
                             m_brush->SetColor( warnCol );
                         else
                             m_brush->SetColor( float4(1,0,0,1) );
@@ -324,7 +324,7 @@ class OverlayDDU : public Overlay
 
             // Gear & Speed
             {
-                if (ir_RPM.getFloat() >= ir_session->rpmSLShift)
+                if (ir_RPM.getFloat() >= g_ir_session->rpmSLShift)
                 {
                     m_brush->SetColor(shiftCol);
                     D2D1_RECT_F r = { m_boxGear.x0, m_boxGear.y0, m_boxGear.x1, m_boxGear.y1 };
@@ -401,7 +401,7 @@ class OverlayDDU : public Overlay
 
             // Position
             {
-                const int pos = ir_getPosition( ir_session->driverCarIdx );
+                const int pos = ir_getPosition( g_ir_session->driverCarIdx );
                 if( pos )
                 {
                     swprintf( s, _countof(s), L"%d", pos );
@@ -411,7 +411,7 @@ class OverlayDDU : public Overlay
 
             // Lap Delta
             {
-                const int lapDelta = ir_getLapDeltaToLeader( ir_session->driverCarIdx, p1carIdx );
+                const int lapDelta = ir_getLapDeltaToLeader( g_ir_session->driverCarIdx, p1carIdx );
                 if( lapDelta )
                 {
                     swprintf( s, _countof(s), L"%d", lapDelta );
@@ -428,7 +428,7 @@ class OverlayDDU : public Overlay
                     float fastest = FLT_MAX;
                     for( int i=0; i<IR_MAX_CARS; ++i )
                     {
-                        const Car& car = ir_session->cars[i];
+                        const Car& car = g_ir_session->cars[i];
                         if( car.isPaceCar || car.isSpectator || car.userName.empty() )
                             continue;
 
@@ -438,7 +438,7 @@ class OverlayDDU : public Overlay
                             fastestLapCarIdx = i;
                         }
                     }
-                    haveFastestLap = fastestLapCarIdx == ir_session->driverCarIdx;
+                    haveFastestLap = fastestLapCarIdx == g_ir_session->driverCarIdx;
                 }
 
                 const float t = ir_LapBestLapTime.getFloat();
@@ -545,7 +545,7 @@ class OverlayDDU : public Overlay
                     }
                     
                     // For Test Drive or solo practice
-                    const int flagStatus = (ir_SessionFlags.getInt() & ((((int)ir_session->sessionType != 0) ? irsdk_oneLapToGreen : 0) | irsdk_yellow | irsdk_yellowWaving | irsdk_red | irsdk_checkered | irsdk_crossed | irsdk_caution | irsdk_cautionWaving | irsdk_disqualify | irsdk_repair));
+                    const int flagStatus = (ir_SessionFlags.getInt() & ((((int)g_ir_session->sessionType != 0) ? irsdk_oneLapToGreen : 0) | irsdk_yellow | irsdk_yellowWaving | irsdk_red | irsdk_checkered | irsdk_crossed | irsdk_caution | irsdk_cautionWaving | irsdk_disqualify | irsdk_repair));
                     if (flagStatus != 0 || ir_CarIdxOnPitRoad.getBool(carIdx)) {
                         dbg("flagStatus: 0x%X", flagStatus);
                         m_isValidFuelLap = false;

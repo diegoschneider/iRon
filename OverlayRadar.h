@@ -72,7 +72,7 @@ protected:
         // Populate RadarInfo
         for (int i = 0; i < IR_MAX_CARS; ++i)
         {
-            const Car& car = ir_session->cars[i];
+            const Car& car = g_ir_session->cars[i];
             const int lapcountCar = ir_CarIdxLap.getInt(i);
 
             // Ignore pace car and cars in pits
@@ -110,7 +110,7 @@ protected:
         for (int i = 0; i < (int)radarInfo.size(); ++i)
         {
             const CarInfo ci = radarInfo[i];
-            if (ci.carIdx == ir_session->driverCarIdx)
+            if (ci.carIdx == g_ir_session->driverCarIdx)
             {
                 selfRadarInfoIdx = i;
 

@@ -407,9 +407,9 @@ extern irsdkCVar ir_LFSHshockDefl_ST;    // float[6] LFSH shock deflection at 36
 extern irsdkCVar ir_LFSHshockVel;    // float[1] LFSH shock velocity (m/s)
 extern irsdkCVar ir_LFSHshockVel_ST;    // float[6] LFSH shock velocity at 360 Hz (m/s)
 
-extern Session* ir_session;
-extern Session ir_session_data[2];
-extern bool ir_session_cur;
+extern Session* g_ir_session;
+extern Session g_ir_session_data[2];
+extern bool g_ir_session_cur;
 
 // Update the session string data. Parses YAML, send to another thread
 void updateSessionStringData(const char* sessionYaml, Session* ir_session_pointer);

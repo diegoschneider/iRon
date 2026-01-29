@@ -22,9 +22,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#define DEBUG_DUMP_SESSIONSTRING false
+
 #include "iracing.h"
 #include "Config.h"
-#include "TelemetryHandler.h"
 #include "string"
 
 #if defined(_DEBUG) or defined(DEBUG_OVERLAY_TIME)
@@ -327,9 +328,9 @@ irsdkCVar ir_LFSHshockVel("LFSHshockVel");    // float[1] LFSH shock velocity (m
 irsdkCVar ir_LFSHshockVel_ST("LFSHshockVel_ST");    // float[6] LFSH shock velocity at 360 Hz (m/s)
 
 // Initialize ir_session
-Session ir_session_data[2];
-bool ir_session_cur = 0;
-Session* ir_session = &ir_session_data[0];
+Session g_ir_session_data[2];
+bool g_ir_session_cur = 0;
+Session* g_ir_session = &g_ir_session_data[0];
 
 static bool parseYamlInt(const char *yamlStr, const char *path, int *dest)
 {
@@ -385,8 +386,9 @@ static bool parseYamlStr(const char *yamlStr, const char *path, std::string& des
     return false;
 }
 
+// TODO: Add Mutex?
 void updateSessionStringData(const char* sessionYaml, Session* ir_session_pointer) {
-#if defined(_DEBUG) and FALSE // disable manually now that tire graph spams this
+#if defined(_DEBUG) and DEBUG_DUMP_SESSIONSTRING
     //printf("%s\n", sessionYaml);
     FILE* fp = fopen("sessionYaml.txt", "ab");
     fprintf(fp, "\n\n==== NEW SESSION STRING ======================================\n");
@@ -559,20 +561,13 @@ void updateSessionStringData(const char* sessionYaml, Session* ir_session_pointe
             if (qualifyingPositionYamlTmp != nullptr) {
                 const char* qualifyingPositionYaml = qualifyingPositionYamlTmp + 16; // +16 to skip the searched string
 
-                //sprintf(path, "QualifyResultsInfo:Results:Position:{%d}CarIdx:", pos);
                 int carIdx = -1;
-                //if (parseYamlInt(qualifyResultsInfoYaml, path, &carIdx)) {
                 if (parseYamlInt(qualifyingPositionYaml, "CarIdx:", &carIdx)) {
 
-                    //sprintf(path, "QualifyResultsInfo:Results:Position:{%d}ClassPosition:", pos);
-
                     int realPos = -1;
-                    //parseYamlInt(qualifyResultsInfoYaml, path, &realPos);
                     parseYamlInt(qualifyingPositionYaml, "ClassPosition:", &realPos);
                     ir_session_pointer->cars[carIdx].qualy.position = realPos + 1;
 
-                    //sprintf(path, "QualifyResultsInfo:Results:Position:{%d}FastestTime:", pos);
-                    //parseYamlFloat(qualifyResultsInfoYaml, path, &ir_session_pointer->cars[carIdx].qualy.fastestTime);
                     parseYamlFloat(qualifyingPositionYaml, "FastestTime:", &ir_session_pointer->cars[carIdx].qualy.fastestTime);
                 }
             }
@@ -591,8 +586,6 @@ void updateSessionStringData(const char* sessionYaml, Session* ir_session_pointe
 
         const char* sessionNumYaml = sessionNumYamlTmp + 16; // +16 to skip the searched string
         std::string sessionNameStr;
-        //sprintf(path, "SessionInfo:Sessions:SessionNum:{%d}SessionName:", session);
-        //if (!parseYamlStr(sessionInfoYaml, path, sessionNameStr)) {
         if (!parseYamlStr(sessionNumYaml, "SessionName:", sessionNameStr)) {
             break;
         }
@@ -610,13 +603,9 @@ void updateSessionStringData(const char* sessionYaml, Session* ir_session_pointe
         }
 
         std::string str;
-        //sprintf(path, "SessionInfo:Sessions:SessionNum:{%d}SessionTime:", session);
-        //parseYamlStr(sessionInfoYaml, path, str);
         parseYamlStr(sessionNumYaml, "SessionTime:", str);
         ir_session_pointer->isUnlimitedTime = int(str == "unlimited");
 
-        //sprintf(path, "SessionInfo:Sessions:SessionNum:{%d}SessionLaps:", session);
-        //parseYamlStr(sessionInfoYaml, path, str);
         parseYamlStr(sessionNumYaml, "SessionLaps:", str);
         ir_session_pointer->isUnlimitedLaps = int(str == "unlimited");
 
@@ -629,8 +618,6 @@ void updateSessionStringData(const char* sessionYaml, Session* ir_session_pointe
             const char* sessionPositionYaml = sessionPositionYamlTmp + 18; // +18 to skip the searched string
 
             int carIdx = -1;
-            //sprintf(path, "SessionInfo:Sessions:SessionNum:{%d}ResultsPositions:Position:{%d}CarIdx:", session, pos);
-            //if (parseYamlInt(sessionInfoYaml, path, &carIdx))
             if (parseYamlInt(sessionPositionYaml, "CarIdx:", &carIdx))
             {
                 SessionPosTimes* curCarEditing = nullptr;
@@ -677,14 +664,14 @@ void updateSessionStringData(const char* sessionYaml, Session* ir_session_pointe
     ir_session_pointer->sof = int(sof / cnt);
     
     ir_session_pointer->initialized = true;
-    ir_session_cur = !ir_session_cur; // switch to this session data
+    g_ir_session_cur = !g_ir_session_cur; // switch to this session data
 
-    ir_session = ir_session_pointer;
+    g_ir_session = ir_session_pointer;
 
     ir_handleConfigChange();
 }
 
-static bool thread_it = true;
+#define THREAD_SESSION_STRING_UPDATE
 ConnectionStatus ir_tick()
 {
     irsdkClient& irsdk = irsdkClient::instance();
@@ -692,34 +679,25 @@ ConnectionStatus ir_tick()
     irsdk.waitForData(16);
 
     if (!irsdk.isConnected()) {
-        ir_session->initialized = false;
+        g_ir_session->initialized = false;
         return ConnectionStatus::DISCONNECTED;
     }
         
 
     if( irsdk.wasSessionStrUpdated() )
     {
-        ir_session_data[!ir_session_cur].initialized = false;
-        if (thread_it) {
-            std::thread sessionStrUpdate = std::thread(updateSessionStringData, irsdk.getSessionStr(), &ir_session_data[!ir_session_cur]);
-            sessionStrUpdate.detach();
-        }
-        else {
-
-#if defined(_DEBUG) or defined(DEBUG_OVERLAY_TIME)
-            std::chrono::steady_clock::time_point debugTimeStart = std::chrono::high_resolution_clock::now();
-#endif
-
-            updateSessionStringData(irsdk.getSessionStr(), &ir_session_data[!ir_session_cur]);
-
-#if defined(_DEBUG) or defined(DEBUG_OVERLAY_TIME)
-            std::chrono::steady_clock::time_point debugTimeEnd = std::chrono::high_resolution_clock::now();
+        g_ir_session_data[!g_ir_session_cur].initialized = false;
+#ifdef THREAD_SESSION_STRING_UPDATE
+        std::thread sessionStrUpdate = std::thread(updateSessionStringData, irsdk.getSessionStr(), &g_ir_session_data[!g_ir_session_cur]);
+        sessionStrUpdate.detach();
+#else
+        std::chrono::steady_clock::time_point debugTimeStart = std::chrono::high_resolution_clock::now();
+        updateSessionStringData(irsdk.getSessionStr(), &g_ir_session_data[!g_ir_session_cur]);
+        std::chrono::steady_clock::time_point debugTimeEnd = std::chrono::high_resolution_clock::now();
             
-            long long debugTimeDiff = std::chrono::duration_cast<std::chrono::microseconds>(debugTimeEnd - debugTimeStart).count();
-            printf("YAML Parsing took %.5d microseconds\n", debugTimeDiff);
+        long long debugTimeDiff = std::chrono::duration_cast<std::chrono::microseconds>(debugTimeEnd - debugTimeStart).count();
+        printf("YAML Parsing took %.5d microseconds\n", debugTimeDiff);
 #endif
-
-        }
 
     } // if session string updated
 
@@ -727,7 +705,7 @@ ConnectionStatus ir_tick()
     const bool resetPitAge = ir_SessionState.getInt() == irsdk_StateWarmup;
     for( int carIdx=0; carIdx<IR_MAX_CARS; ++carIdx )
     {
-        Car& car = ir_session->cars[carIdx];
+        Car& car = g_ir_session->cars[carIdx];
         if( resetPitAge )
             car.lastLapInPits = 0;
         if( ir_SessionState.getInt() >= 0 /* work around getting garbage sometimes (?) */ && ir_CarIdxOnPitRoad.getBool(carIdx) )
@@ -747,7 +725,7 @@ void ir_handleConfigChange()
 
     for( int carIdx=0; carIdx<IR_MAX_CARS; ++carIdx )
     {
-        Car& car = ir_session->cars[carIdx];
+        Car& car = g_ir_session->cars[carIdx];
 
         car.isBuddy = 0;
         for( const std::string& name : buddies ) {
@@ -777,7 +755,7 @@ float ir_estimateLaptime()
     float best = ir_LapBestLapTime.getFloat();
     if( best > 0 )
         return best;
-    return ir_session->cars[ir_session->driverCarIdx].carClassEstLapTime;
+    return g_ir_session->cars[g_ir_session->driverCarIdx].carClassEstLapTime;
 }
 
 int ir_getPosition( int carIdx )
@@ -787,15 +765,15 @@ int ir_getPosition( int carIdx )
     if( pos > 0 )
         return pos;
 
-    pos = ir_session->cars[carIdx].race.position;
+    pos = g_ir_session->cars[carIdx].race.position;
     if( pos > 0 )
         return pos;
 
-    pos = ir_session->cars[carIdx].qualy.position;
+    pos = g_ir_session->cars[carIdx].qualy.position;
     if( pos > 0 )
         return pos;
 
-    pos = ir_session->cars[carIdx].practice.position;
+    pos = g_ir_session->cars[carIdx].practice.position;
     if( pos > 0 )
         return pos;
 
@@ -806,7 +784,7 @@ int ir_getPositionsChanged(int carIdx)
 {
 
     int posAct = ir_CarIdxClassPosition.getInt(carIdx);
-    int posQualy = ir_session->cars[carIdx].qualy.position;
+    int posQualy = g_ir_session->cars[carIdx].qualy.position;
 
     if (posQualy > 0 && posAct > 0)
         return posQualy - posAct;
@@ -816,7 +794,7 @@ int ir_getPositionsChanged(int carIdx)
 
 int ir_getLapDeltaToLeader( int carIdx, int ldrIdx )
 {
-    if( ir_session->sessionType!=SessionType::RACE || ir_isPreStart() || carIdx < 0 || ldrIdx < 0 )
+    if( g_ir_session->sessionType!=SessionType::RACE || ir_isPreStart() || carIdx < 0 || ldrIdx < 0 )
         return 0;
 
     const int carLapCount = std::max( ir_CarIdxLap.getInt(carIdx), ir_CarIdxLapCompleted.getInt(carIdx) );
@@ -855,6 +833,7 @@ float ir_getDeltaTime(int carIdx, int selfIdx)
     return lapDelta;
 }
 
+// TODO: Fix this calculation
 float ir_getLapsRemaining() {
     double sessionTime = ir_SessionTimeRemain.getDouble();
 
@@ -878,7 +857,7 @@ int ir_getClassId(int carIdx)
     if (id > 0)
         return id;
 
-    id = ir_session->cars[carIdx].classId;
+    id = g_ir_session->cars[carIdx].classId;
     if (id > 0)
         return id;
 

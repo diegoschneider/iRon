@@ -93,7 +93,7 @@ class OverlayRelative : public Overlay
         virtual void onUpdate()
         {
             // Wait until we get car data
-            if (!ir_session->initialized) return;
+            if (!g_ir_session->initialized) return;
 
             struct CarInfo {
                 int     carIdx = 0;
@@ -108,15 +108,15 @@ class OverlayRelative : public Overlay
             };
             std::vector<CarInfo> relatives;
             relatives.reserve( IR_MAX_CARS );
-            const float ownClassEstLaptime = ir_session->cars[ir_session->driverCarIdx].carClassEstLapTime;
+            const float ownClassEstLaptime = g_ir_session->cars[g_ir_session->driverCarIdx].carClassEstLapTime;
             const int lapcountSelf = ir_Lap.getInt();
             const float selfLapDistPct = ir_LapDistPct.getFloat();
-            const float SelfEstLapTime = ir_CarIdxEstTime.getFloat(ir_session->driverCarIdx);
+            const float SelfEstLapTime = ir_CarIdxEstTime.getFloat(g_ir_session->driverCarIdx);
             const int classSelf = ir_PlayerCarClass.getInt();
             // Populate cars with the ones for which a relative/delta comparison is valid
             for( int i=0; i<IR_MAX_CARS; ++i )
             {
-                const Car& car = ir_session->cars[i];
+                const Car& car = g_ir_session->cars[i];
 
                 const int lapcountCar = ir_CarIdxLap.getInt(i);
 
@@ -162,7 +162,7 @@ class OverlayRelative : public Overlay
                     // Also reset it during initial pacing, since iRacing for some reason starts counting
                     // during the pace lap but then resets the counter a couple seconds in, confusing the logic.
                     // And consider the pace car in the same lap as us, too.
-                    if( ir_session->sessionType!=SessionType::RACE || ir_isPreStart() || car.isPaceCar )
+                    if( g_ir_session->sessionType!=SessionType::RACE || ir_isPreStart() || car.isPaceCar )
                     {
                         lapDelta = 0;
                     }
@@ -189,7 +189,7 @@ class OverlayRelative : public Overlay
             int selfCarInfoIdx = -1;
             for( int i=0; i<(int)relatives.size(); ++i )
             {
-                if( relatives[i].carIdx == ir_session->driverCarIdx ) {
+                if( relatives[i].carIdx == g_ir_session->driverCarIdx ) {
                     selfCarInfoIdx = i;
                     break;
                 }
@@ -247,7 +247,7 @@ class OverlayRelative : public Overlay
                     continue;
 
                 const CarInfo& ci  = relatives[i];
-                const Car&     car = ir_session->cars[ci.carIdx];
+                const Car&     car = g_ir_session->cars[ci.carIdx];
 
                 // Determine text color
                 float4 col = sameLapCol;
@@ -437,7 +437,7 @@ class OverlayRelative : public Overlay
                     for( int i=0; i<(int)relatives.size(); ++i )
                     {
                         const CarInfo& ci     = relatives[i];
-                        const Car&     car    = ir_session->cars[ci.carIdx];
+                        const Car&     car    = g_ir_session->cars[ci.carIdx];
 
                         if( phase == 0 && ci.lapDelta >= 0 )
                             continue;
@@ -454,7 +454,7 @@ class OverlayRelative : public Overlay
                         
                         float e = ir_CarIdxLapDistPct.getFloat(ci.carIdx);
 
-                        const float eself = ir_CarIdxLapDistPct.getFloat(ir_session->driverCarIdx);
+                        const float eself = ir_CarIdxLapDistPct.getFloat(g_ir_session->driverCarIdx);
 
                         if( minimapIsRelative )
                         {
@@ -471,6 +471,7 @@ class OverlayRelative : public Overlay
                             col.a *= 0.5f;
 
                         const float dx = 2;
+                        // TODO: Config value for the height of these car markers?
                         const float dy = (car.isSelf || car.isPaceCar || ci.classLeader || ci.overallLeader ? 4.0f : 0.0f);
                         r = {e-dx, y+2-dy, e+dx, y+h-2+dy};
                         m_brush->SetColor( col );

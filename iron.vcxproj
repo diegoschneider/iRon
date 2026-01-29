@@ -230,7 +230,6 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Overlay.cpp" />
     <ClCompile Include="OverlayDebug.cpp" />
-    <ClCompile Include="TelemetryHandler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.h" />
@@ -247,9 +246,7 @@
     <ClInclude Include="OverlayRadar.h" />
     <ClInclude Include="OverlayRelative.h" />
     <ClInclude Include="OverlayStandings.h" />
-    <ClInclude Include="OverlayTires.h" />
     <ClInclude Include="picojson.h" />
-    <ClInclude Include="TelemetryHandler.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>
