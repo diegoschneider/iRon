@@ -82,7 +82,7 @@ class OverlayTires : public Overlay
             m_columns.add( (int)Columns::RM, m_columnWidth , m_fontSize/2 );
             m_columns.add( (int)Columns::RR, m_columnWidth , m_fontSize/2 );
 
-            const int selfCarId = ir_session->cars[ir_session->driverCarIdx].carID;
+            const int selfCarId = g_ir_session->cars[g_ir_session->driverCarIdx].carID;
             
             std::string mod_name = std::format("{}_{}", m_name, selfCarId);
             m_lowTemp = g_cfg.getFloat(mod_name, "TempLow", 45);
@@ -93,7 +93,7 @@ class OverlayTires : public Overlay
         virtual void onUpdate()
         {
 
-            if (ir_session->sessionType == SessionType::QUALIFY || ir_session->sessionType == SessionType::RACE) {
+            if (g_ir_session->sessionType == SessionType::QUALIFY || g_ir_session->sessionType == SessionType::RACE) {
 
                 wchar_t s[64] = L"Unavailable outside of practice";
                 float w = computeTextExtent(s, m_dwriteFactory.Get(), m_textFormat.Get()).x;
@@ -122,7 +122,7 @@ class OverlayTires : public Overlay
             float rectH = max_height - m_fontSize*3;
             float rectX, rectY, tempY, wearY;
 
-            const int selfCarId = ir_session->cars[ir_session->driverCarIdx].carID;
+            const int selfCarId = g_ir_session->cars[g_ir_session->driverCarIdx].carID;
             swprintf( s, _countof(s), L"CarID: %i", selfCarId); // carID
             m_brush->SetColor( col );
             m_text.render( m_renderTarget.Get(), s, m_textFormatSmall.Get(), 5, 100, 10, m_brush.Get(), DWRITE_TEXT_ALIGNMENT_CENTER );

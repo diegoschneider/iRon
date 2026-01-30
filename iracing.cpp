@@ -27,6 +27,7 @@ SOFTWARE.
 #include "iracing.h"
 #include "Config.h"
 #include "string"
+#include "TelemetryHandler.h"
 
 #if defined(_DEBUG) or defined(DEBUG_OVERLAY_TIME)
     #include <chrono>
